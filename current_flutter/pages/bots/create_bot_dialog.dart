@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 
+bool _isLaunchHovered = false;
+bool _isCancelHovered = false;
+
 class CreateBotDialog extends StatefulWidget {
   const CreateBotDialog({super.key});
 
@@ -153,41 +156,95 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
   }
 
   Widget _buildActions(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final brand = AppTheme.brand(context);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Отмена',
-            style: TextStyle(color: AppTheme.txtMuted(context)),
+        // Кнопка ОТМЕНА
+        MouseRegion(
+          onEnter: (_) => setState(() => _isCancelHovered = true),
+          onExit: (_) => setState(() => _isCancelHovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 40,
+            decoration: BoxDecoration(
+              color: _isCancelHovered ? AppTheme.bd(context).withOpacity(0.2) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.bd(context)),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                splashColor: AppTheme.txtMuted(context).withOpacity(0.15),
+                highlightColor: AppTheme.txtMuted(context).withOpacity(0.05),
+                onTap: () => Navigator.of(context).pop(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Center(
+                    child: Text(
+                      'Отмена',
+                      style: TextStyle(
+                        color: AppTheme.txt(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 8),
-        Material(
-          color: AppTheme.brand(context),
-          borderRadius: BorderRadius.circular(6),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(6),
-            onTap: () {
-              if (_formKey.currentState!.validate()) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Робот $_name создан')),
-                );
-              }
-            },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              child: Text(
-                'Запустить',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+
+        // Кнопка ЗАПУСТИТЬ (С валидацией формы и рабочей волной)
+        MouseRegion(
+          onEnter: (_) => setState(() => _isLaunchHovered = true),
+          onExit: (_) => setState(() => _isLaunchHovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 40,
+            decoration: BoxDecoration(
+              color: _isLaunchHovered ? brand.withOpacity(0.9) : brand,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: _isLaunchHovered ? [
+                BoxShadow(
+                  color: brand.withOpacity(0.25),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                )
+              ] : null,
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                splashColor: isDark ? Colors.black.withOpacity(0.15) : Colors.white.withOpacity(0.25),
+                highlightColor: Colors.white.withOpacity(0.05),
+                onTap: () {
+                  // ЛОГИКА ВАЛИДАЦИИ ФОРМЫ ВОЗВРАЩЕНА НА МЕСТО
+                  if (_formKey.currentState != null && _formKey.currentState!.validate()) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Новый торговый бот успешно запущен!')),
+                    );
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Center(
+                    child: Text(
+                      'Запустить',
+                      style: TextStyle(
+                        color: isDark ? AppTheme.darkBg : Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

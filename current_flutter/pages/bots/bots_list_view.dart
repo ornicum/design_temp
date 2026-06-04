@@ -21,55 +21,27 @@ class BotsListView extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double availW = constraints.maxWidth;
+    final double width = MediaQuery.of(context).size.width;
 
-        // 1. Мобилки: Карточки вертикальной стопкой
-        if (availW < 650) {
-          return Column(
-            children: bots.map((b) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: BotCard(bot: b),
-              );
-            }).toList(),
-          );
-        }
+    int crossAxisCount = 1;
+    if (width >= 1050) {
+      crossAxisCount = 3;
+    } else if (width >= 650) {
+      crossAxisCount = 2;
+    }
 
-        // 2. Планшеты и десктоп: Бьем массив на порции по 2 или 3 карточки в ряд
-        final int columns = availW < 1050 ? 2 : 3;
-        final List<List<Bot>> rows = [];
-
-        for (int i = 0; i < bots.length; i += columns) {
-          final int end = (i + columns < bots.length) ? i + columns : bots.length;
-          rows.add(bots.sublist(i, end));
-        }
-
-        return Column(
-          children: rows.map((rowBots) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  ...rowBots.map((b) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: BotCard(bot: b),
-                    ),
-                  )),
-                  // Добиваем пустые места в строке флекс-пустышками
-                  ...List.generate(columns - rowBots.length, (_) => const Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      child: SizedBox.shrink(),
-                    ),
-                  )),
-                ],
-              ),
-            );
-          }).toList(),
-        );
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: bots.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        mainAxisExtent: 240, // ИСПРАВЛЕНО: увеличен размер для предотвращения bottom overflow
+      ),
+      itemBuilder: (context, index) {
+        return BotCard(bot: bots[index]);
       },
     );
   }

@@ -4,7 +4,6 @@ import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/pages/bots/bots_filters.dart';
 import 'package:osts_mobile_app/pages/bots/bots_list_view.dart';
 import 'package:osts_mobile_app/pages/bots/create_bot_dialog.dart';
-// Абсолютный импорт нашей новой глобальной UI кнопки
 import 'package:osts_mobile_app/components/ui/osts_button.dart';
 
 class BotsPage extends StatefulWidget {
@@ -55,10 +54,27 @@ class _BotsPageState extends State<BotsPage> {
     ),
     Bot(
       id: '3',
+      name: 'ETH DCA Paused', // Возвращен бот со статусом paused
+      description: 'Временная остановка накопления',
+      strategy: 'dca',
+      status: 'paused',
+      exchange: 'bybit',
+      tradingPair: 'ETH/USDT',
+      initialCapital: 4000.0,
+      currentBalance: 4100.0,
+      profitLoss: 100.0,
+      profitLossPercent: 2.5,
+      riskLevel: 'low',
+      totalTrades: 88,
+      winRate: 65.0,
+      maxDrawdown: 3.0,
+    ),
+    Bot(
+      id: '4',
       name: 'SOL Momentum',
       description: 'Импульсная торговля',
       strategy: 'scalping',
-      status: 'paused',
+      status: 'stopped',
       exchange: 'okx',
       tradingPair: 'SOL/USDT',
       initialCapital: 5000.0,
@@ -88,15 +104,14 @@ class _BotsPageState extends State<BotsPage> {
     List<Bot> filtered = _allBots.where((bot) {
       if (_activeTab == 'active') return bot.status == 'active';
       if (_activeTab == 'paused') return bot.status == 'paused';
+      if (_activeTab == 'stopped') return bot.status == 'stopped';
       return true;
     }).toList();
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((bot) {
-        final nameMatch = bot.name.toLowerCase()
-            .contains(_searchQuery.toLowerCase());
-        final pairMatch = bot.tradingPair.toLowerCase()
-            .contains(_searchQuery.toLowerCase());
+        final nameMatch = bot.name.toLowerCase().contains(_searchQuery.toLowerCase());
+        final pairMatch = bot.tradingPair.toLowerCase().contains(_searchQuery.toLowerCase());
         return nameMatch || pairMatch;
       }).toList();
     }
@@ -131,7 +146,6 @@ class _BotsPageState extends State<BotsPage> {
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  // ИСПРАВЛЕНО: Применяем наш глобальный UI-виджет кнопки
                   child: OstsButton(
                     label: 'Создать',
                     icon: Icons.add,
@@ -171,7 +185,6 @@ class _BotsPageState extends State<BotsPage> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                // ИСПРАВЛЕНО: Глобальный UI-виджет кнопки на десктопе
                 OstsButton(
                   label: 'Создать',
                   icon: Icons.add,

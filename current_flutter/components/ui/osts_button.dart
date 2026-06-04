@@ -18,8 +18,7 @@ class OstsButton extends StatefulWidget {
   });
 
   @override
-  State<OstsButton> createState() =>
-      _OstsButtonState();
+  State<OstsButton> createState() => _OstsButtonState();
 }
 
 class _OstsButtonState extends State<OstsButton> {
@@ -29,67 +28,55 @@ class _OstsButtonState extends State<OstsButton> {
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
     final brand = AppTheme.brand(context);
-    final isPrimary =
-        widget.variant == OstsButtonVariant.primary;
+    final isPrimary = widget.variant == OstsButtonVariant.primary;
 
     Color bgColor;
     if (isPrimary) {
-      bgColor = _isHovered
-          ? brand.withOpacity(0.92)
-          : brand;
+      bgColor = _isHovered ? brand.withOpacity(0.92) : brand;
     } else {
-      bgColor = _isHovered
-          ? brand.withOpacity(0.12)
-          : Colors.transparent;
+      bgColor = _isHovered ? brand.withOpacity(0.12) : Colors.transparent;
     }
 
-    final bdColor = isPrimary
-        ? Colors.transparent
-        : brand;
-
-    final defaultPrimaryText = isDark
-        ? AppTheme.darkBg
-        : Colors.white;
-
-    final contentColor = isPrimary
-        ? defaultPrimaryText
-        : (_isHovered
-        ? brand
-        : brand.withOpacity(0.8));
+    final bdColor = isPrimary ? Colors.transparent : brand;
+    final defaultPrimaryText = isDark ? AppTheme.darkBg : Colors.white;
+    final contentColor = isPrimary ? defaultPrimaryText : (_isHovered ? brand : brand.withOpacity(0.8));
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Material(
-        type: MaterialType.canvas,
-        color: bgColor,
-        // Оформление границ без AnimatedContainer
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: bdColor),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
+          boxShadow: _isHovered && isPrimary ? [
+            BoxShadow(
+              color: brand.withOpacity(0.25),
+              blurRadius: 16,
+              spreadRadius: 1,
+            )
+          ] : null,
         ),
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(12),
-          // Тот самый контрастный неоновый всплеск
-          splashColor: brand.withOpacity(0.4),
-          highlightColor: brand.withOpacity(0.2),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            child: Center(
+        child: Material(
+          type: MaterialType.canvas,
+          color: bgColor, // Цвет фона СТРОГО в Material для работы волны
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: bdColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(12),
+            splashColor: isPrimary ? defaultPrimaryText.withOpacity(0.2) : brand.withOpacity(0.25),
+            highlightColor: brand.withOpacity(0.08),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (widget.icon != null) ...[
-                    Icon(
-                      widget.icon,
-                      color: contentColor,
-                      size: 18,
-                    ),
+                    Icon(widget.icon, color: contentColor, size: 18),
                     const SizedBox(width: 8),
                   ],
                   Text(
