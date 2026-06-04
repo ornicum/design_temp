@@ -1,0 +1,227 @@
+import 'package:flutter/material.dart';
+import '../app_theme.dart';
+import '../pages/dashboard_page.dart';
+import '../pages/bots_page.dart';
+import '../pages/analytics_page.dart';
+import '../pages/api_keys_page.dart';
+import '../pages/notifications_page.dart';
+import '../pages/settings_page.dart';
+
+// Наш бессмертный реактивный синглтон индекса
+final ValueNotifier<int> globalMenuIndex = ValueNotifier<int>(0);
+
+class AppLayout extends StatelessWidget {
+  const AppLayout({super.key});
+
+  // Массив всех страниц платформы
+  static final List<Widget> _screens = [
+    const DashboardScreen(),     // 0
+    const BotsScreen(),          // 1
+    const AnalyticsScreen(),     // 2
+    const ApiKeysScreen(),       // 3
+    const NotificationsScreen(), // 4
+    const SettingsScreen(),      // 5
+  ];
+
+  void _onItemTapped(int index) {
+    globalMenuIndex.value = index; // Мгновенно меняем глобальное значение
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    return ValueListenableBuilder<int>(
+      valueListenable: globalMenuIndex,
+      builder: (context, activeIndex, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF080D1A),
+
+          // 📱 Мобильный AppBar с гамбургером
+          appBar: isMobile ? AppBar(
+            backgroundColor: const Color(0xFF0A0F1D),
+            elevation: 0,
+            title: Text(
+              _getMenuTitle(activeIndex).toUpperCase(),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: Colors.white),
+            ),
+          ) : null,
+
+          // 📱 Мобильная выезжающая шторка Drawer
+          drawer: isMobile ? Drawer(
+            backgroundColor: const Color(0xFF0A0F1D),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 40),
+                const Text('ТЕРМИНАЛ', style: TextStyle(color: Color(0xFF09DAEC), fontWeight: FontWeight.bold, fontSize: 18)),
+                const Divider(color: Color(0xFF1B2336), height: 30),
+                _buildMobileDrawerItem(context, 'Dashboard', Icons.dashboard_outlined, 0, activeIndex),
+                _buildMobileDrawerItem(context, 'Trading Bots', Icons.smart_toy_outlined, 1, activeIndex),
+                _buildMobileDrawerItem(context, 'Analytics', Icons.analytics_outlined, 2, activeIndex),
+                _buildMobileDrawerItem(context, 'API Connections', Icons.vpn_key_outlined, 3, activeIndex),
+                _buildMobileDrawerItem(context, 'System Logs', Icons.notifications_outlined, 4, activeIndex),
+                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Color(0xFF1B2336))),
+                _buildMobileDrawerItem(context, 'Settings', Icons.settings_outlined, 5, activeIndex),
+              ],
+            ),
+          ) : null,
+
+          // 📱 Мобильный нижний бар
+          bottomNavigationBar: isMobile ? BottomNavigationBar(
+            currentIndex: activeIndex > 2 ? 0 : activeIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: const Color(0xFF0A0F1D),
+            selectedItemColor: const Color(0xFF09DAEC),
+            unselectedItemColor: const Color(0xFF64748B),
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Дашборд'),
+              BottomNavigationBarItem(icon: Icon(Icons.smart_toy_outlined), label: 'Боты'),
+              BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), label: 'Аналитика'),
+            ],
+          ) : null,
+
+          body: Row(
+            children: [
+              // 💻 Наш оригинальный десктопный сайдбар БЕЗ СБОЙНЫХ ЦИКЛОВ
+              if (!isMobile) Container(
+                width: 260,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0A0F1D),
+                  border: Border(right: BorderSide(color: Color(0xFF1B2336))),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Text('BOT_PLATFORM', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 24.0, right: 24.0, bottom: 12.0),
+                      child: Text('Навигация', style: TextStyle(color: Color(0xFF475569), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        children: [
+                          // Прямо передаем activeIndex в каждую кнопку!
+                          _SidebarItem(title: 'Dashboard', icon: Icons.dashboard_outlined, index: 0, currentIndex: activeIndex, onTap: () => _onItemTapped(0)),
+                          _SidebarItem(title: 'Trading Bots', icon: Icons.smart_toy_outlined, index: 1, currentIndex: activeIndex, onTap: () => _onItemTapped(1)),
+                          _SidebarItem(title: 'Analytics', icon: Icons.analytics_outlined, index: 2, currentIndex: activeIndex, onTap: () => _onItemTapped(2)),
+                          _SidebarItem(title: 'API Connections', icon: Icons.vpn_key_outlined, index: 3, currentIndex: activeIndex, onTap: () => _onItemTapped(3)),
+                          _SidebarItem(title: 'System Logs', icon: Icons.notifications_outlined, index: 4, currentIndex: activeIndex, onTap: () => _onItemTapped(4)),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+                            child: Divider(color: Color(0xFF1B2336)),
+                          ),
+                          _SidebarItem(title: 'Settings', icon: Icons.settings_outlined, index: 5, currentIndex: activeIndex, onTap: () => _onItemTapped(5)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Контентная область с нашей любимой всплывающей анимацией приближения
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return ScaleTransition(
+                      scale: Tween<double>(begin: 0.96, end: 1.0).animate(animation),
+                      child: FadeTransition(opacity: animation, child: child),
+                    );
+                  },
+                  child: Container(
+                    key: ValueKey<int>(activeIndex),
+                    child: _screens[activeIndex],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getMenuTitle(int index) {
+    switch (index) {
+      case 1: return 'Trading Bots';
+      case 2: return 'Analytics';
+      case 3: return 'API Connections';
+      case 4: return 'System Logs';
+      case 5: return 'Settings';
+      default: return 'Dashboard';
+    }
+  }
+
+  Widget _buildMobileDrawerItem(BuildContext context, String title, IconData icon, int index, int activeIndex) {
+    final bool isCurrent = activeIndex == index;
+    return ListTile(
+      leading: Icon(icon, color: isCurrent ? const Color(0xFF09DAEC) : const Color(0xFF64748B)),
+      title: Text(title, style: TextStyle(color: isCurrent ? Colors.white : const Color(0xFF94A3B8))),
+      onTap: () {
+        _onItemTapped(index);
+        Navigator.pop(context);
+      },
+    );
+  }
+}
+
+class _SidebarItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final int index;
+  final int currentIndex;
+  final VoidCallback onTap;
+
+  const _SidebarItem({required this.title, required this.icon, required this.index, required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isActive = index == currentIndex;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Material(
+        color: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF09DAEC).withOpacity(0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Row(
+                children: [
+                  Icon(icon, color: isActive ? const Color(0xFF09DAEC) : const Color(0xFF64748B), size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : const Color(0xFF94A3B8),
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
