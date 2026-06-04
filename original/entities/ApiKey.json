@@ -1,0 +1,12 @@
+{
+  "name": "ApiKey",
+  "type": "object",
+  "properties": {
+    "label": { "type": "string", "title": "Название" },
+    "exchange": { "type": "string", "title": "Биржа", "enum": ["binance","bybit","okx","kucoin","kraken"], "enumNames": ["Binance","Bybit","OKX","KuCoin","Kraken"] },
+    "api_key_masked": { "type": "string", "title": "API Key (маскированный)" },
+    "is_active": { "type": "boolean", "title": "Активен", "default": true },
+    "permissions": { "type": "string", "title": "Разрешения" }
+  },
+  "required": ["label","exchange","api_key_masked"]
+}

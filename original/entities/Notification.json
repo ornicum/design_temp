@@ -1,0 +1,14 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "bot_id": { "type": "string", "title": "ID бота" },
+    "bot_name": { "type": "string", "title": "Название бота" },
+    "type": { "type": "string", "title": "Тип", "enum": ["trade","status_change","error","warning"], "enumNames": ["Сделка","Смена статуса","Ошибка","Предупреждение"] },
+    "title": { "type": "string", "title": "Заголовок" },
+    "message": { "type": "string", "title": "Сообщение" },
+    "is_read": { "type": "boolean", "title": "Прочитано", "default": false },
+    "severity": { "type": "string", "title": "Важность", "enum": ["info","success","warning","error"], "default": "info" }
+  },
+  "required": ["bot_id","type","title","message"]
+}

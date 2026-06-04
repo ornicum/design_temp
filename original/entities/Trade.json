@@ -1,0 +1,19 @@
+{
+  "name": "Trade",
+  "type": "object",
+  "properties": {
+    "bot_id": { "type": "string", "title": "ID бота" },
+    "bot_name": { "type": "string", "title": "Название бота" },
+    "type": { "type": "string", "title": "Тип", "enum": ["buy","sell"], "enumNames": ["Покупка","Продажа"] },
+    "trading_pair": { "type": "string", "title": "Торговая пара" },
+    "amount": { "type": "number", "title": "Количество" },
+    "price": { "type": "number", "title": "Цена" },
+    "total": { "type": "number", "title": "Итого ($)" },
+    "profit_loss": { "type": "number", "title": "PnL ($)" },
+    "fee": { "type": "number", "title": "Комиссия ($)" },
+    "status": { "type": "string", "title": "Статус", "enum": ["executed","pending","cancelled","failed"], "enumNames": ["Исполнена","Ожидает","Отменена","Ошибка"], "default": "executed" },
+    "exchange": { "type": "string", "title": "Биржа" },
+    "executed_at": { "type": "string", "title": "Время исполнения" }
+  },
+  "required": ["bot_id","type","trading_pair","amount","price","total"]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Bot",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "title": "Название" },
+    "description": { "type": "string", "title": "Описание" },
+    "strategy": { "type": "string", "title": "Стратегия", "enum": ["grid","dca","scalping","arbitrage","momentum","mean_reversion"], "enumNames": ["Grid Trading","DCA","Scalping","Арбитраж","Momentum","Mean Reversion"] },
+    "status": { "type": "string", "title": "Статус", "enum": ["active","paused","stopped","error"], "enumNames": ["Активен","На паузе","Остановлен","Ошибка"], "default": "stopped" },
+    "exchange": { "type": "string", "title": "Биржа", "enum": ["binance","bybit","okx","kucoin","kraken"], "enumNames": ["Binance","Bybit","OKX","KuCoin","Kraken"] },
+    "trading_pair": { "type": "string", "title": "Торговая пара" },
+    "initial_capital": { "type": "number", "title": "Начальный капитал" },
+    "current_balance": { "type": "number", "title": "Текущий баланс" },
+    "profit_loss": { "type": "number", "title": "PnL ($)" },
+    "profit_loss_percent": { "type": "number", "title": "PnL (%)" },
+    "risk_level": { "type": "string", "title": "Уровень риска", "enum": ["low","medium","high"], "enumNames": ["Низкий","Средний","Высокий"], "default": "medium" },
+    "total_trades": { "type": "number", "title": "Всего сделок", "default": 0 },
+    "win_rate": { "type": "number", "title": "Win Rate (%)", "default": 0 },
+    "max_drawdown": { "type": "number", "title": "Макс. просадка (%)", "default": 0 },
+    "icon": { "type": "string", "title": "Иконка" }
+  },
+  "required": ["name","strategy","exchange","trading_pair","initial_capital"]
+}
