@@ -30,7 +30,6 @@ class _StatCardState extends State<StatCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isPos = (widget.change ?? 0) >= 0;
     final isDark = AppTheme.isDark(context);
     final double width = MediaQuery.of(context).size.width;
     final double pad = width < 600 ? 12.0 : 20.0;
@@ -46,173 +45,125 @@ class _StatCardState extends State<StatCard> {
         ? AppTheme.brand(context).withOpacity(0.3)
         : const Color(0xFF64748B);
 
-    final List<BoxShadow>? currentShadow = _isHovered
-        ? [
-      isDark
-          ? BoxShadow(
-        color: AppTheme.brand(context)
-            .withOpacity(0.05),
-        blurRadius: 16,
-        spreadRadius: 1,
-      )
-          : BoxShadow(
-        color: Colors.black.withOpacity(0.04),
-        blurRadius: 12,
-        offset: const Offset(0, 4),
-      )
-    ]
-        : null;
-
-    final Color iconBgColor = isDark
-        ? AppTheme.brand(context)
-        .withOpacity(_isHovered ? 0.2 : 0.1)
-        : AppTheme.brand(context)
-        .withOpacity(_isHovered ? 0.15 : 0.08);
-
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        // ИСПРАВЛЕНО: Убрали паддинг отсюда, чтобы InkWell прижался к краям
-        padding: EdgeInsets.zero,
+        // ИСПРАВЛЕНИЕ: Никакой фиксированной высоты. Полная свобода для контента.
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _isHovered
-                ? borderHoverColor
-                : AppTheme.bd(context),
+            color: _isHovered ? borderHoverColor : AppTheme.bd(context),
             width: 1.0,
           ),
-          boxShadow: currentShadow,
         ),
-        // ИСПРАВЛЕНО: Иерархия перевернута. InkWell теперь на самом верху!
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(11),
-            splashColor:
-            AppTheme.brand(context).withOpacity(0.12),
             onTap: () {},
-            // ИСПРАВЛЕНО: Паддинг перенесен внутрь кликабельной зоны
             child: Padding(
               padding: EdgeInsets.all(pad),
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // 1. Первая строка: Заголовок и Иконка
                   Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
                           widget.title,
                           maxLines: 1,
-                          overflow:
-                          TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize:
-                            width < 600 ? 12 : 14,
+                            fontSize: width < 600 ? 12 : 14,
                             fontWeight: FontWeight.w500,
-                            color: AppTheme.txtMuted(
-                              context,
-                            ),
+                            color: AppTheme.txtMuted(context),
                           ),
                         ),
                       ),
-                      if (widget.icon != null &&
-                          width > 350)
-                        Container(
-                          padding:
-                          const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: iconBgColor,
-                            borderRadius:
-                            BorderRadius.circular(
-                              6,
-                            ),
-                          ),
-                          child: AnimatedScale(
-                            scale: _isHovered ? 1.12 : 1.0,
-                            duration: const Duration(
-                              milliseconds: 200,
-                            ),
-                            child: Icon(
-                              widget.icon,
-                              size: 14,
-                              color: AppTheme.brand(
-                                context,
-                              ),
-                            ),
-                          ),
-                        ),
+                      if (widget.icon != null && width > 350)
+                        Icon(widget.icon, size: 14, color: AppTheme.brand(context)),
                     ],
                   ),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: widget.value,
-                          style: TextStyle(
-                            fontSize: width < 600
-                                ? 18
-                                : 22,
-                            color: valColor,
-                            fontWeight:
-                            FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        if (widget.change != null) ...[
-                          const WidgetSpan(
-                            alignment: PlaceholderAlignment
-                                .baseline,
-                            baseline:
-                            TextBaseline.alphabetic,
-                            child: SizedBox(width: 6),
-                          ),
-                          TextSpan(
-                            text: '${isPos ? "▲" : "▼"} '
-                                '${widget.change!.toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight:
-                              FontWeight.bold,
-                              color: isPos
-                                  ? AppTheme.success
-                                  : AppTheme
-                                  .destructive,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (widget.changeLabel != null)
-                    Text(
-                      widget.changeLabel!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.txtMuted(
-                          context,
-                        ),
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+
+                  // 2. Вторая строка: Баланс / Значение + Проценты
+                  _buildValueBlock(width, valColor),
+
+                  // 3. Третья строка: Подзаголовок (или его невидимый двойник-заглушка)
+                  const SizedBox(height: 4),
+                  _buildFooterLabel(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildValueBlock(double width, Color valColor) {
+    final isPos = (widget.change ?? 0) >= 0;
+
+    // Если процентов нет, рендерим невидимую заглушку для сохранения единой высоты строки
+    final Widget changeWidget = widget.change != null
+        ? Text(
+      ' ${isPos ? "▲" : "▼"} ${widget.change!.toStringAsFixed(0)}%',
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        color: isPos ? AppTheme.success : AppTheme.destructive,
+      ),
+    )
+        : const Opacity(
+      opacity: 0,
+      child: Text(' ▲ 0%', style: TextStyle(fontSize: 11)),
+    );
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: widget.value,
+            style: TextStyle(
+              fontSize: width < 600 ? 18 : 22,
+              color: valColor,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+          ),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: changeWidget,
+          ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildFooterLabel() {
+    // Сохраняем физическое место под третью строчку, даже если лейбла нет
+    if (widget.changeLabel != null) {
+      return Text(
+        widget.changeLabel!,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 11, color: AppTheme.txtMuted(context)),
+      );
+    }
+    return const Opacity(
+      opacity: 0,
+      child: Text('Placeholder', style: TextStyle(fontSize: 11)),
     );
   }
 }

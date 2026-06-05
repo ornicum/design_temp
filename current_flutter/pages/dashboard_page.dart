@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/components/portfolio_chart.dart';
 import 'package:osts_mobile_app/components/recent_trades_table.dart';
-import 'package:osts_mobile_app/pages/dashboard/'
-    'dashboard_header.dart';
-import 'package:osts_mobile_app/pages/dashboard/'
-    'dashboard_stats_grid.dart';
-import 'package:osts_mobile_app/pages/dashboard/'
-    'dashboard_bots_section.dart';
+import 'package:osts_mobile_app/pages/dashboard/dashboard_header.dart';
+import 'package:osts_mobile_app/pages/dashboard/dashboard_stats_grid.dart';
+import 'package:osts_mobile_app/pages/dashboard/dashboard_bots_section.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -51,36 +51,12 @@ class DashboardPage extends StatelessWidget {
       ),
     ];
 
-    final activeBots = bots
-        .where((b) => b.status == 'active')
-        .toList();
-
-    final totalBalance = bots.fold<double>(
-      0,
-          (sum, b) => sum + b.currentBalance,
-    );
-
-    final totalPnL = bots.fold<double>(
-      0,
-          (sum, b) => sum + b.profitLoss,
-    );
-
-    final totalTrades = bots.fold<int>(
-      0,
-          (sum, b) => sum + b.totalTrades,
-    );
-
-    final avgWinRate = bots.isNotEmpty
-        ? bots.fold<double>(
-      0,
-          (sum, b) => sum + b.winRate,
-    ) /
-        bots.length
-        : 0.0;
-
-    final double pnlPercent = totalPnL != 0
-        ? (totalPnL / (totalBalance - totalPnL) * 100)
-        : 0.0;
+    final activeBots = bots.where((b) => b.status == 'active').toList();
+    final totalBalance = bots.fold(0.0, (sum, b) => sum + b.currentBalance);
+    final totalPnL = bots.fold(0.0, (sum, b) => sum + b.profitLoss);
+    final totalTrades = bots.fold(0, (sum, b) => sum + b.totalTrades);
+    final avgWinRate = bots.isNotEmpty ? bots.fold(0.0, (sum, b) => sum + b.winRate) / bots.length : 0.0;
+    final double pnlPercent = totalPnL != 0 ? (totalPnL / (totalBalance - totalPnL) * 100) : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -88,15 +64,9 @@ class DashboardPage extends StatelessWidget {
         builder: (context, constraints) {
           return Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: constraints.maxWidth,
-              ),
-              // ИСПРАВЛЕНО: Чистый скролл без скрытых паддингов ListView
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12, // Сжали отступ до минимума
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,13 +83,53 @@ class DashboardPage extends StatelessWidget {
                       totalCount: bots.length,
                     ),
                     const SizedBox(height: 20),
-                    const PortfolioChart(),
-                    const SizedBox(height: 20),
-                    DashboardBotsSection(
-                      activeBots: activeBots,
+
+                    // Заголовок графика динамики портфеля
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            I18n.t(context, 'dash_chart_title'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.txt(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            I18n.t(context, 'dash_chart_sub'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.txtMuted(context),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 12),
+                    const PortfolioChart(),
+
                     const SizedBox(height: 20),
-                    const RecentTradesTable(limit: 6),
+                    DashboardBotsSection(activeBots: activeBots),
+                    const SizedBox(height: 20),
+
+                    // ИСПРАВЛЕНО: Заголовок таблицы последних сделок вынесен наружу и полностью переведен
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        I18n.t(context, 'trades_table_title'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.txt(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const RecentTradesTable(limit: 6), // Очищенная таблица
                   ],
                 ),
               ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/components/bot_card.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardBotsSection extends StatelessWidget {
   final List<Bot> activeBots;
@@ -16,7 +18,6 @@ class DashboardBotsSection extends StatelessWidget {
     if (activeBots.isEmpty) {
       return const SizedBox.shrink();
     }
-
     final displayBots = activeBots.take(3).toList();
 
     return Column(
@@ -28,7 +29,7 @@ class DashboardBotsSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Активные боты',
+                I18n.t(context, 'dash_active_section'), // ПЕРЕВЕДЕНО
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -36,7 +37,7 @@ class DashboardBotsSection extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => context.go('/bots'), // Фикс навигации
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -44,7 +45,7 @@ class DashboardBotsSection extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      'Все боты ',
+                      I18n.t(context, 'dash_all_bots_link'), // ПЕРЕВЕДЕНО
                       style: TextStyle(
                         color: AppTheme.brand(context),
                         fontSize: 13,
@@ -66,7 +67,6 @@ class DashboardBotsSection extends StatelessWidget {
           builder: (context, constraints) {
             final double availW = constraints.maxWidth;
 
-            // Смартфоны: Карточки стопкой в Column
             if (availW < 650) {
               return Column(
                 children: displayBots.map((bot) {
@@ -78,7 +78,6 @@ class DashboardBotsSection extends StatelessWidget {
               );
             }
 
-            // Планшеты: 2 карточки в ряд, 3-я снизу
             if (availW < 1000) {
               return Column(
                 children: [
@@ -105,21 +104,16 @@ class DashboardBotsSection extends StatelessWidget {
               );
             }
 
-            // Десктоп: ИСПРАВЛЕНО - Строка из Expanded намертво убирает оверфлоу
             return Row(
               children: [
                 Expanded(child: BotCard(bot: displayBots[0])),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: displayBots.length > 1
-                      ? BotCard(bot: displayBots[1])
-                      : const SizedBox.shrink(),
+                  child: displayBots.length > 1 ? BotCard(bot: displayBots[1]) : const SizedBox.shrink(),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: displayBots.length > 2
-                      ? BotCard(bot: displayBots[2])
-                      : const SizedBox.shrink(),
+                  child: displayBots.length > 2 ? BotCard(bot: displayBots[2]) : const SizedBox.shrink(),
                 ),
               ],
             );

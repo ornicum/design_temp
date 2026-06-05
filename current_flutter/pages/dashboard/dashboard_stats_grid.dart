@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/components/stat_card.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardStatsGrid extends StatelessWidget {
   final double totalBalance;
@@ -28,99 +29,52 @@ class DashboardStatsGrid extends StatelessWidget {
       builder: (context, constraints) {
         final double availW = constraints.maxWidth;
 
-        // Мобильный режим: 2 строки по 2 карточки
-        if (availW < 800) {
-          return Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Общий баланс',
-                      value: '\$${totalBalance.toLocale()}',
-                      change: pnlPercent,
-                      icon: Icons.account_balance_wallet,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Активные боты',
-                      value: '$activeCount / $totalCount',
-                      icon: Icons.smart_toy,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Общий PnL',
-                      value: '${totalPnL >= 0 ? "+" : ""}'
-                          '\$${totalPnL.toStringAsFixed(2)}',
-                      variant: totalPnL >= 0
-                          ? StatCardVariant.success
-                          : StatCardVariant.danger,
-                      icon: Icons.trending_up,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Всего сделок',
-                      value: totalTrades.toLocale(),
-                      changeLabel: 'Win Rate: '
-                          '${avgWinRate.toStringAsFixed(1)}%',
-                      icon: Icons.analytics,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
+        // Рассчитываем адаптивную ширину карточек по нашей безопасной формуле
+        int columns = 1;
+        if (availW >= 1024) {
+          columns = 4;
+        } else if (availW >= 600) {
+          columns = 2;
         }
 
-        // Десктопный режим: Все 4 карточки строго в один ряд
-        // ИСПРАВЛЕНО: Чистый Row + Expanded уничтожает shrinkWrap баг
-        return Row(
+        final double itemWidth = (availW - (columns - 1) * 12) / columns;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Общий баланс',
+                title: I18n.t(context, 'dash_total_balance'),
                 value: '\$${totalBalance.toLocale()}',
                 change: pnlPercent,
                 icon: Icons.account_balance_wallet,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Активные боты',
+                title: I18n.t(context, 'dash_active_bots'),
                 value: '$activeCount / $totalCount',
                 icon: Icons.smart_toy,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Общий PnL',
-                value: '${totalPnL >= 0 ? "+" : ""}'
-                    '\$${totalPnL.toStringAsFixed(2)}',
-                variant: totalPnL >= 0
-                    ? StatCardVariant.success
-                    : StatCardVariant.danger,
+                title: I18n.t(context, 'dash_total_pnl'),
+                value: '${totalPnL >= 0 ? "+" : ""}\$${totalPnL.toStringAsFixed(2)}',
+                variant: totalPnL >= 0 ? StatCardVariant.success : StatCardVariant.danger,
                 icon: Icons.trending_up,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Всего сделок',
+                title: I18n.t(context, 'dash_total_trades'),
                 value: totalTrades.toLocale(),
-                changeLabel: 'Win Rate: '
-                    '${avgWinRate.toStringAsFixed(1)}%',
+                changeLabel: 'Win Rate: ${avgWinRate.toStringAsFixed(1)}%',
                 icon: Icons.analytics,
               ),
             ),

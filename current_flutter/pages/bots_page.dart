@@ -5,6 +5,7 @@ import 'package:osts_mobile_app/pages/bots/bots_filters.dart';
 import 'package:osts_mobile_app/pages/bots/bots_list_view.dart';
 import 'package:osts_mobile_app/pages/bots/create_bot_dialog.dart';
 import 'package:osts_mobile_app/components/ui/osts_button.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class BotsPage extends StatefulWidget {
   const BotsPage({super.key});
@@ -17,6 +18,7 @@ class _BotsPageState extends State<BotsPage> {
   String _activeTab = 'all';
   String _searchQuery = '';
 
+  // ВОССТАНОВЛЕНО: Полный массив ботов со всеми терминальными статусами
   final List<Bot> _allBots = [
     Bot(
       id: '1',
@@ -54,27 +56,10 @@ class _BotsPageState extends State<BotsPage> {
     ),
     Bot(
       id: '3',
-      name: 'ETH DCA Paused', // Возвращен бот со статусом paused
-      description: 'Временная остановка накопления',
-      strategy: 'dca',
-      status: 'paused',
-      exchange: 'bybit',
-      tradingPair: 'ETH/USDT',
-      initialCapital: 4000.0,
-      currentBalance: 4100.0,
-      profitLoss: 100.0,
-      profitLossPercent: 2.5,
-      riskLevel: 'low',
-      totalTrades: 88,
-      winRate: 65.0,
-      maxDrawdown: 3.0,
-    ),
-    Bot(
-      id: '4',
       name: 'SOL Momentum',
       description: 'Импульсная торговля',
       strategy: 'scalping',
-      status: 'stopped',
+      status: 'paused',
       exchange: 'okx',
       tradingPair: 'SOL/USDT',
       initialCapital: 5000.0,
@@ -85,6 +70,40 @@ class _BotsPageState extends State<BotsPage> {
       totalTrades: 92,
       winRate: 52.1,
       maxDrawdown: 6.8,
+    ),
+    Bot(
+      id: '4',
+      name: 'XRP Reversal Pro',
+      description: 'Контртрендовая стратегия',
+      strategy: 'grid',
+      status: 'stopped', // Восстановленный статус
+      exchange: 'binance',
+      tradingPair: 'XRP/USDT',
+      initialCapital: 4000.0,
+      currentBalance: 4000.0,
+      profitLoss: 0.0,
+      profitLossPercent: 0.0,
+      riskLevel: 'medium',
+      totalTrades: 310,
+      winRate: 61.2,
+      maxDrawdown: 3.9,
+    ),
+    Bot(
+      id: '5',
+      name: 'ADA Breakout Multi',
+      description: 'Пробой уровней поддержки',
+      strategy: 'breakout',
+      status: 'stopped', // Восстановленный статус
+      exchange: 'bybit',
+      tradingPair: 'ADA/USDT',
+      initialCapital: 2500.0,
+      currentBalance: 2100.0,
+      profitLoss: -400.0,
+      profitLossPercent: -16.0,
+      riskLevel: 'high',
+      totalTrades: 45,
+      winRate: 40.0,
+      maxDrawdown: 18.2,
     ),
   ];
 
@@ -101,6 +120,7 @@ class _BotsPageState extends State<BotsPage> {
     final double width = MediaQuery.of(context).size.width;
     final bool isMobile = width < 600;
 
+    // ВОССТАНОВЛЕНО: Строгая фильтрация по всем 4 вкладкам, включая stopped
     List<Bot> filtered = _allBots.where((bot) {
       if (_activeTab == 'active') return bot.status == 'active';
       if (_activeTab == 'paused') return bot.status == 'paused';
@@ -127,28 +147,19 @@ class _BotsPageState extends State<BotsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Торговые боты',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.txt(context),
-                    letterSpacing: -0.5,
-                  ),
+                  I18n.t(context, 'bots_title'),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.txt(context), letterSpacing: -0.5),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Управление автоматическими стратегиями',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.txtMuted(context),
-                  ),
+                  I18n.t(context, 'bots_subtitle'),
+                  style: TextStyle(fontSize: 13, color: AppTheme.txtMuted(context)),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OstsButton(
-                    label: 'Создать',
-                    icon: Icons.add,
+                    label: I18n.t(context, 'bots_btn_create'),
                     onTap: _showCreateDialog,
                   ),
                 ),
@@ -163,30 +174,22 @@ class _BotsPageState extends State<BotsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Торговые боты',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.txt(context),
-                          letterSpacing: -0.5,
-                        ),
+                        I18n.t(context, 'bots_title'),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.txt(context), letterSpacing: -0.5),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Управление автоматическими стратегиями',
+                        I18n.t(context, 'bots_subtitle'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.txtMuted(context),
-                        ),
+                        style: TextStyle(fontSize: 13, color: AppTheme.txtMuted(context)),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
                 OstsButton(
-                  label: 'Создать',
+                  label: I18n.t(context, 'bots_btn_create'),
                   icon: Icons.add,
                   onTap: _showCreateDialog,
                 ),
