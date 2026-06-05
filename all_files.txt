@@ -12,47 +12,126 @@ FILE: msg_from_previous_session.txt
 
 
 ================================================
+FILE: rules.txt
+================================================
+СИСТЕМНЫЙ ПРОТОКОЛ РАБОТЫ С КОДОМ OSTS (СКОРМИТЬ НОВОЙ СЕССИИ)
+Инструкция для ИИ: Ты выступаешь в роли Senior Flutter Developer. Мы дорабатываем и локализуем торговый терминал OSTS (перенос веб-дизайна от base44 на Flutter). Твоя кодовая база полностью реальна и находится по адресу: https://ornicum.one/all_files.html.
+Чтобы твои ответы не превратились в мусор, а сессия не была закрыта за галлюцинации, ты обязан БЕСПРЕКОСЛОВНО подчиняться следующим правилам:
+1. Запрет на угадывание и отсебятину
+
+    Тебе категорически запрещено писать код из головы, выдумывать имена классов, сигнатуры конструкторов, параметры виджетов или файловую структуру.
+    Если тебе нужно изменить или использовать виджет/модель/страницу — ты обязан физически пойти по ссылке https://ornicum.one/all_files.html, найти этот файл через поиск, прочитать его реальный код и использовать его параметры пиксель-в-пиксель.
+    Если файла нет в базе или ты не видишь его структуру, ты обязан остановиться и написать: «Я не вижу исходный код файла [Имя], скинь его содержимое». Любая попытка угадать параметры приведет к немедленной ошибке компиляции.
+
+2. Формат вывода: Строго «БЫЛО / СТАЛО»
+
+    Прекрати генерировать и переписывать файлы целиком. Длина вывода Markdown режет код, ломает скобки и синтаксис Flutter.
+    Любое исправление, перевод строки или рефакторинг ты выдаешь исключительно в виде точечных атомарных блоков:
+        // Путь к файлу: lib/...
+        БЫЛО: [конкретный кусок оригинального кода]
+        СТАЛО: [исправленный кусок кода]
+    Полный код файла разрешено выводить только в том случае, если это абсолютно новый, только что созданный с нуля изолированный микро-компонент в результате декомпозиции.
+
+3. Архитектурные рамки проекта
+
+    Имена экранов: В кодовой базе страницы называются строго Screen, а не Page (например: AnalyticsScreen, ApiKeysScreen, SettingsScreen, NotificationsScreen). Исключения — DashboardPage и BotsPage.
+    Дизайн-система: Никаких стандартных ElevatedButton. Все главные кнопки — это кастомный виджет OstsButton (принимает параметры label: и onTap:). Название бренда OSTS гвоздями прибито в системном конфиге lib/config.dart через AppConfig.appName.
+    Локализация (i18n): Менеджер лежит в lib/init/i18n_manager.dart. Вызов строк — I18n.t(context, 'ключ'). Все новые ключи в словаре обязаны иметь строгие префиксы экранов (например, analytics_screen_...), чтобы избежать конфликтов при константной оценке Map.
+    Навигация: Централизованно управляется через метод _onItemTapped(index) в корневом lib/components/layout.dart. Сайдбар и нижний бар отправляют туда только индексы, никаких ручных context.go() внутри кнопок меню быть не должно. Главный роут — строго /dashboard вместо /.
+
+4. Текущая точка остановки
+Проект успешно компилируется на Linux под встроенный синглтон локализации. Сайдбар, мобильный нижний бар, топ-бар (с флагами 🇷🇺/🇺🇸, неоновым аватаром и колокольчиком), Дашборд, динамический график доходности со всеми месяцами года, RecentTradesTable (с выводом trade.botName) и BotsPage (с фильтрами на 4 статуса) полностью переведены и отлажены.
+ТВОЯ ПЕРВАЯ ЗАДАЧА СЕЙЧАС:
+Мы переходим к локализации и чистке от хардкода Страницы аналитики (AnalyticsScreen).
+
+    Не пиши код.
+    Зайди на сайт https://ornicum.one/all_files.html.
+    Найди файл lib/pages/analytics_page.dart.
+    Выведи мне его оригинальный конструктор и структуру метода build, чтобы доказать, что ты прочитал реальный файл, а не выдумал его. Жду.
+
+
+
+
+================================================
 FILE: current_flutter/app_router.dart
 ================================================
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:osts_mobile_app/components/layout.dart';
+import 'package:osts_mobile_app/pages/dashboard_page.dart';
 import 'package:osts_mobile_app/pages/bots_page.dart';
-import 'components/layout.dart';
-import 'pages/dashboard_page.dart';
-import 'pages/login_page.dart';
+import 'package:osts_mobile_app/pages/analytics_page.dart';
+import 'package:osts_mobile_app/pages/api_keys_page.dart';
+import 'package:osts_mobile_app/pages/settings_page.dart';
+import 'package:osts_mobile_app/pages/login_page.dart';
+import 'package:osts_mobile_app/pages/notifications_page.dart';
 
-bool isUserAuthenticated = true;
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/',
-  redirect: (context, state) {
-    final bool loggingIn = state.uri.path == '/login';
-    if (!isUserAuthenticated && !loggingIn) return '/login';
-    if (isUserAuthenticated && loggingIn) return '/';
-    return null;
-  },
+  navigatorKey: _rootNavigatorKey,
+  initialLocation: '/dashboard',
   routes: [
     GoRoute(
       path: '/login',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const LoginScreen(),
     ),
-    // ИСПРАВЛЕНО: Маршрутизатор ShellRoute прокидывает child в AppLayout
     ShellRoute(
+      navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) {
         return AppLayout(child: child);
       },
       routes: [
         GoRoute(
-          path: '/',
-          builder: (context, state) => const DashboardPage(),
+          path: '/dashboard',
+          parentNavigatorKey: _shellNavigatorKey,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: DashboardPage(),
+          ),
         ),
         GoRoute(
           path: '/bots',
-          builder: (context, state) => const BotsPage(),
+          parentNavigatorKey: _shellNavigatorKey,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: BotsPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/analytics',
+          parentNavigatorKey: _shellNavigatorKey,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: AnalyticsScreen(), // СИНХРОНИЗИРОВАНО: Реальное имя класса
+          ),
+        ),
+        GoRoute(
+          path: '/api-keys',
+          parentNavigatorKey: _shellNavigatorKey,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ApiKeysScreen(), // СИНХРОНИЗИРОВАНО: Реальное имя класса
+          ),
+        ),
+        GoRoute(
+          path: '/settings',
+          parentNavigatorKey: _shellNavigatorKey,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: SettingsScreen(), // СИНХРОНИЗИРОВАНО: Реальное имя класса
+          ),
+        ),
+        GoRoute(
+          path: '/notifications',
+          parentNavigatorKey: _shellNavigatorKey,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: NotificationsScreen(), // СИНХРОНИЗИРОВАНО: Реальное имя класса
+          ),
         ),
       ],
     ),
   ],
+  redirect: (context, state) {
+    return null;
+  },
 );
 
 
@@ -172,30 +251,33 @@ class AppTheme {
 
 
 ================================================
+FILE: current_flutter/config.dart
+================================================
+class AppConfig {
+  static const String appName = 'OSTS';
+}
+
+
+
+================================================
 FILE: current_flutter/main.dart
 ================================================
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'app_router.dart';
-
-// Импортируем интерфейс напрямую в область видимости
+import 'init/i18n_manager.dart';
 import 'init/app_initializer.dart'
 if (dart.library.io) 'init/app_initializer_desktop.dart'
 if (dart.library.html) 'init/app_initializer_web.dart';
 
-final themeNotifier =
-ValueNotifier<ThemeMode>(ThemeMode.dark);
-
-// Теперь тип AppInitializer виден без префиксов
+final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
 late final AppInitializer platformInit;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   platformInit = await getInitializer();
   await platformInit.initialize();
-
   runApp(const MyApp());
 }
 
@@ -204,18 +286,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, currentMode, _) {
-        return MaterialApp.router(
-          title: 'Trading Bot Platform',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: currentMode,
-          routerConfig: appRouter,
-        );
-      },
+    // Внедряем i18nNotifier через кастомный InheritedNotifier в самый верх дерева
+    return I18n(
+      notifier: i18nNotifier,
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeNotifier,
+        builder: (context, currentThemeMode, _) {
+          return MaterialApp.router(
+            title: 'Trading Bot Platform',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: currentThemeMode,
+            routerConfig: appRouter,
+          );
+        },
+      ),
     );
   }
 }
@@ -228,12 +314,10 @@ FILE: current_flutter/components/bot_card.dart
 import 'package:flutter/material.dart';
 import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/models/models.dart';
-import 'package:osts_mobile_app/components/'
-    'dashboard/bot_card_footer.dart';
+import 'package:osts_mobile_app/components/dashboard/bot_card_footer.dart';
 
 class BotCard extends StatefulWidget {
   final Bot bot;
-
   const BotCard({super.key, required this.bot});
 
   @override
@@ -245,21 +329,33 @@ class _BotCardState extends State<BotCard> {
 
   Color _getExchangeColor(String ex) {
     switch (ex.toLowerCase()) {
-      case 'binance': return const Color(0xFFF3BA2F);
-      case 'bybit': return const Color(0xFFFFA500);
-      case 'okx': return const Color(0xFF0000FF);
-      case 'kucoin': return const Color(0xFF00E676);
-      case 'kraken': return const Color(0xFF6A1B9A);
-      default: return AppTheme.darkMuted;
+      case 'binance':
+        return const Color(0xFFF3BA2F);
+      case 'bybit':
+        return const Color(0xFFFFA500);
+      case 'okx':
+        return const Color(0xFF0000FF);
+      case 'kucoin':
+        return const Color(0xFF00E676);
+      case 'kraken':
+        return const Color(0xFF6A1B9A);
+      default:
+        return AppTheme.darkMuted;
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'active': return AppTheme.success;
-      case 'paused': return AppTheme.warning;
-      case 'error': return AppTheme.destructive;
-      default: return AppTheme.darkMuted;
+      case 'active':
+        return AppTheme.success;
+      case 'paused':
+        return AppTheme.warning;
+      case 'error':
+        return AppTheme.destructive;
+      case 'stopped':
+        return const Color(0xFF94A3B8); // Slate 400 из оригинального index.css
+      default:
+        return AppTheme.darkMuted;
     }
   }
 
@@ -267,31 +363,20 @@ class _BotCardState extends State<BotCard> {
   Widget build(BuildContext context) {
     final isPos = widget.bot.profitLoss >= 0;
     final isDark = AppTheme.isDark(context);
+    final Color titleColor = _isHovered ? AppTheme.brand(context) : AppTheme.txt(context);
+    final Color borderHoverColor = isDark ? AppTheme.brand(context).withOpacity(0.3) : const Color(0xFF64748B);
 
-    final Color titleColor = _isHovered
-        ? AppTheme.brand(context)
-        : AppTheme.txt(context);
-
-    final Color borderHoverColor = isDark
-        ? AppTheme.brand(context).withOpacity(0.3)
-        : const Color(0xFF64748B);
-
-    final List<BoxShadow>? currentShadow = _isHovered
-        ? [
-      isDark
-          ? BoxShadow(
-        color: AppTheme.brand(context)
-            .withOpacity(0.05),
+    final List<BoxShadow>? currentShadow = _isHovered ? [
+      isDark ? BoxShadow(
+        color: AppTheme.brand(context).withOpacity(0.05),
         blurRadius: 16,
         spreadRadius: 1,
-      )
-          : BoxShadow(
+      ) : BoxShadow(
         color: Colors.black.withOpacity(0.04),
         blurRadius: 12,
         offset: const Offset(0, 4),
       )
-    ]
-        : null;
+    ] : null;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -300,40 +385,40 @@ class _BotCardState extends State<BotCard> {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
-          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _isHovered
-                ? borderHoverColor
-                : AppTheme.bd(context),
+            color: _isHovered ? borderHoverColor : AppTheme.bd(context),
           ),
           boxShadow: currentShadow,
         ),
         child: Material(
-          color: Colors.transparent,
+          color: AppTheme.surface(context), // Окрашиваем Material, освобождая InkWell
+          borderRadius: BorderRadius.circular(11),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            splashColor:
-            AppTheme.brand(context).withOpacity(0.12),
-            onTap: () {},
+            borderRadius: BorderRadius.circular(11),
+            splashColor: AppTheme.brand(context).withOpacity(0.12),
+            highlightColor: AppTheme.brand(context).withOpacity(0.04),
+            onTap: () {
+              // Будущий переход на детальный экран бота
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Переход к боту ${widget.bot.name} (ID: ${widget.bot.id})'),
+                ),
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AnimatedDefaultTextStyle(
-                            duration: const Duration(
-                              milliseconds: 200,
-                            ),
+                            duration: const Duration(milliseconds: 200),
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -345,25 +430,18 @@ class _BotCardState extends State<BotCard> {
                           Row(
                             children: [
                               Text(
-                                widget.bot.exchange
-                                    .toUpperCase(),
+                                widget.bot.exchange.toUpperCase(),
                                 style: AppTheme.monoStyle(
                                   fontSize: 11,
-                                  fontWeight:
-                                  FontWeight.bold,
-                                  color:
-                                  _getExchangeColor(
-                                    widget.bot.exchange,
-                                  ),
+                                  fontWeight: FontWeight.bold,
+                                  color: _getExchangeColor(widget.bot.exchange),
                                 ),
                               ),
                               Text(
-                                '  ·  '
-                                    '${widget.bot.tradingPair}',
+                                ' · ${widget.bot.tradingPair}',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: AppTheme
-                                      .txtMuted(context),
+                                  color: AppTheme.txtMuted(context),
                                 ),
                               ),
                             ],
@@ -371,32 +449,20 @@ class _BotCardState extends State<BotCard> {
                         ],
                       ),
                       Container(
-                        padding:
-                        const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(
-                            widget.bot.status,
-                          ).withOpacity(0.1),
-                          borderRadius:
-                          BorderRadius.circular(12),
+                          color: _getStatusColor(widget.bot.status).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: _getStatusColor(
-                              widget.bot.status,
-                            ).withOpacity(0.2),
+                            color: _getStatusColor(widget.bot.status).withOpacity(0.2),
                           ),
                         ),
                         child: Text(
-                          widget.bot.status
-                              .toUpperCase(),
+                          widget.bot.status.toUpperCase(),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: _getStatusColor(
-                              widget.bot.status,
-                            ),
+                            color: _getStatusColor(widget.bot.status),
                           ),
                         ),
                       ),
@@ -404,47 +470,33 @@ class _BotCardState extends State<BotCard> {
                   ),
                   const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'PnL',
                             style: TextStyle(
                               fontSize: 11,
-                              color: AppTheme
-                                  .txtMuted(context),
+                              color: AppTheme.txtMuted(context),
                             ),
                           ),
                           const SizedBox(height: 2),
                           Row(
                             children: [
                               Icon(
-                                isPos
-                                    ? Icons.arrow_upward
-                                    : Icons.arrow_downward,
+                                isPos ? Icons.arrow_upward : Icons.arrow_downward,
                                 size: 14,
-                                color: isPos
-                                    ? AppTheme.success
-                                    : AppTheme
-                                    .destructive,
+                                color: isPos ? AppTheme.success : AppTheme.destructive,
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                '${isPos ? "+" : ""}'
-                                    '${widget.bot.profitLoss.toStringAsFixed(2)}\$',
-                                style: AppTheme
-                                    .monoStyle(
+                                '${isPos ? "+" : ""}${widget.bot.profitLoss.toStringAsFixed(2)}\$',
+                                style: AppTheme.monoStyle(
                                   fontSize: 13,
-                                  fontWeight:
-                                  FontWeight.bold,
-                                  color: isPos
-                                      ? AppTheme.success
-                                      : AppTheme
-                                      .destructive,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPos ? AppTheme.success : AppTheme.destructive,
                                 ),
                               ),
                             ],
@@ -452,35 +504,28 @@ class _BotCardState extends State<BotCard> {
                         ],
                       ),
                       Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
                             'Стратегия',
                             style: TextStyle(
                               fontSize: 11,
-                              color: AppTheme
-                                  .txtMuted(context),
+                              color: AppTheme.txtMuted(context),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            widget.bot.strategy
-                                .toUpperCase(),
+                            widget.bot.strategy.toUpperCase(),
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight:
-                              FontWeight.w500,
-                              color: AppTheme.txt(
-                                context,
-                              ),
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.txt(context),
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                  // ИСПРАВЛЕНО: Теперь вызывается один чистый виджет футера
                   BotCardFooter(bot: widget.bot),
                 ],
               ),
@@ -500,242 +545,76 @@ FILE: current_flutter/components/layout.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:osts_mobile_app/app_theme.dart';
-import 'package:osts_mobile_app/main.dart';
-import 'package:osts_mobile_app/components/layout/'
-    'interactive_nav_item.dart';
-import 'package:osts_mobile_app/components/layout/'
-    'footer_action_button.dart';
+import 'package:osts_mobile_app/components/layout/app_top_bar.dart';
+import 'package:osts_mobile_app/components/layout/app_sidebar.dart';
+import 'package:osts_mobile_app/components/layout/app_bottom_bar.dart';
 
-class AppLayout extends StatefulWidget {
+class AppLayout extends StatelessWidget {
   final Widget child;
 
-  const AppLayout({super.key, required this.child});
+  const AppLayout({
+    super.key,
+    required this.child,
+  });
 
-  @override
-  State<AppLayout> createState() => _AppLayoutState();
-}
+  int _getSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).uri.toString();
+    if (location.startsWith('/bots')) return 1;
+    if (location.startsWith('/analytics')) return 2;
+    if (location.startsWith('/api-keys')) return 3;
+    if (location.startsWith('/settings')) return 4;
+    return 0;
+  }
 
-class _AppLayoutState extends State<AppLayout> {
-  bool _isCollapsed = false;
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/dashboard');
+        break;
+      case 1:
+        context.go('/bots');
+        break;
+      case 2:
+        context.go('/analytics');
+        break;
+      case 3:
+        context.go('/api-keys');
+        break;
+      case 4:
+        context.go('/settings');
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bool isMobile =
-        MediaQuery.of(context).size.width < 1024;
+    final double width = MediaQuery.of(context).size.width;
+    final bool isMobile = width < 900;
+    final int currentIndex = _getSelectedIndex(context);
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      drawer: isMobile ? _buildMobileDrawer() : null,
-      bottomNavigationBar: isMobile ? _buildMobileNav() : null,
-      body: SafeArea(
-        child: isMobile
-            ? Column(
-          children: [
-            _buildTopBar(isMobile),
-            // ИСПРАВЛЕНО: Тонкая серая линия режет
-            // пустоту и отделяет TopBar в светлой теме
-            Divider(
-              color: AppTheme.bd(context),
-              height: 1,
-            ),
-            Expanded(child: widget.child),
-          ],
-        )
-            : Stack(
-          children: [
-            AnimatedPadding(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              padding: EdgeInsets.only(
-                left: _isCollapsed ? 64.0 : 240.0,
-              ),
-              child: Column(
-                children: [
-                  _buildTopBar(isMobile),
-                  Expanded(child: widget.child),
-                ],
-              ),
-            ),
-            _buildDesktopSidebar(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(bool isMobile) {
-    final double width = MediaQuery.of(context).size.width;
-
-    if (!isMobile) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 12,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            IconButton(
-              icon: Icon(
-                AppTheme.isDark(context)
-                    ? Icons.light_mode_outlined
-                    : Icons.dark_mode_outlined,
-                size: 20,
-              ),
-              onPressed: () {
-                themeNotifier.value = AppTheme.isDark(context)
-                    ? ThemeMode.light
-                    : ThemeMode.dark;
-              },
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(
-                Icons.notifications_outlined,
-                size: 20,
-              ),
-              onPressed: () => context.go('/notifications'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ИСПРАВЛЕНО: Максимально плотная, зажатая шапка Binance
-    return Container(
-      height: 40.0,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
+      bottomNavigationBar: isMobile
+          ? AppBottomBar(
+        currentIndex: currentIndex,
+        onTap: (index) => _onItemTapped(index, context),
+      )
+          : null,
+      body: Row(
         children: [
-          // Левая кнопка меню (Бургер) 32x32
-          SizedBox(
-            width: 32,
-            height: 32,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => Scaffold.of(context).openDrawer(),
-              child: const Center(
-                child: Icon(Icons.menu, size: 22),
-              ),
+          if (!isMobile)
+            AppSidebar(
+              currentIndex: currentIndex,
+              onItemTapped: (index) => _onItemTapped(index, context),
             ),
-          ),
-
-          // Правая группа (Сверх-компактный блок иконок)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Кнопка переключения темы 32x32
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    themeNotifier.value = AppTheme.isDark(context)
-                        ? ThemeMode.light
-                        : ThemeMode.dark;
-                  },
-                  child: Center(
-                    child: Icon(
-                      AppTheme.isDark(context)
-                          ? Icons.light_mode_outlined
-                          : Icons.dark_mode_outlined,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              // Убрали лишний SizedBox(width), иконки теперь стоят плотно
-
-              // Кнопка уведомлений 32x32
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => context.go('/notifications'),
-                  child: const Center(
-                    child: Icon(
-                      Icons.notifications_outlined,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopSidebar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      width: _isCollapsed ? 64.0 : 240.0,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        color: AppTheme.sidebar(context),
-        border: Border(
-          right: BorderSide(color: AppTheme.bd(context)),
-        ),
-      ),
-      child: ClipRect(
-        child: Column(
-          children: [
-            _buildSidebarHeader(),
-            Expanded(child: _buildNavigationList()),
-            _buildSidebarFooter(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarHeader() {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppTheme.bd(context)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppTheme.brand(context).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.bolt,
-              color: AppTheme.brand(context),
-              size: 18,
-            ),
-          ),
-          Visibility(
-            visible: !_isCollapsed,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          Expanded(
+            child: Column(
               children: [
-                const SizedBox(width: 12),
-                Text(
-                  'OSTS',
-                  style: TextStyle(
-                    color: AppTheme.txt(context),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    letterSpacing: 0.5,
+                AppTopBar(isMobile: isMobile),
+                Divider(height: 1, thickness: 1, color: AppTheme.bd(context)),
+                Expanded(
+                  child: SafeArea(
+                    child: child,
                   ),
                 ),
               ],
@@ -744,124 +623,6 @@ class _AppLayoutState extends State<AppLayout> {
         ],
       ),
     );
-  }
-
-  Widget _buildNavigationList() {
-    final currentPath = GoRouterState.of(context).uri.path;
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(
-        vertical: 16,
-        horizontal: 8,
-      ),
-      children: [
-        InteractiveNavItem(
-          icon: Icons.dashboard,
-          label: 'Обзор',
-          path: '/',
-          currentPath: currentPath,
-          isCollapsed: _isCollapsed,
-        ),
-        InteractiveNavItem(
-          icon: Icons.smart_toy,
-          label: 'Боты',
-          path: '/bots',
-          currentPath: currentPath,
-          isCollapsed: _isCollapsed,
-        ),
-        InteractiveNavItem(
-          icon: Icons.bar_chart,
-          label: 'Аналитика',
-          path: '/analytics',
-          currentPath: currentPath,
-          isCollapsed: _isCollapsed,
-        ),
-        InteractiveNavItem(
-          icon: Icons.vpn_key,
-          label: 'API Ключи',
-          path: '/api-keys',
-          currentPath: currentPath,
-          isCollapsed: _isCollapsed,
-        ),
-        InteractiveNavItem(
-          icon: Icons.settings,
-          label: 'Настройки',
-          path: '/settings',
-          currentPath: currentPath,
-          isCollapsed: _isCollapsed,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSidebarFooter() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: AppTheme.bd(context)),
-        ),
-      ),
-      child: Column(
-        children: [
-          FooterActionButton(
-            icon: Icons.logout,
-            label: 'Выход',
-            isCollapsed: _isCollapsed,
-            isDestructive: true,
-            onTap: () {},
-          ),
-          FooterActionButton(
-            icon: _isCollapsed ? Icons.chevron_right : Icons.chevron_left,
-            label: 'Свернуть',
-            isCollapsed: _isCollapsed,
-            onTap: () => setState(() => _isCollapsed = !_isCollapsed),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileDrawer() {
-    return Drawer(
-      backgroundColor: AppTheme.sidebar(context),
-      child: Column(
-        children: [
-          const SizedBox(height: 64),
-          Expanded(child: _buildNavigationList()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileNav() {
-    final currentPath = GoRouterState.of(context).uri.path;
-
-    return BottomNavigationBar(
-      backgroundColor: AppTheme.sidebar(context),
-      selectedItemColor: AppTheme.brand(context),
-      unselectedItemColor: AppTheme.txtMuted(context),
-      currentIndex: _getMobileIndex(currentPath),
-      onTap: _onMobileTap,
-      items: const [
-        BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard), label: 'Обзор'),
-        BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: 'Боты'),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Настройки'),
-      ],
-    );
-  }
-
-  int _getMobileIndex(String path) {
-    if (path.startsWith('/bots')) return 1;
-    if (path.startsWith('/settings')) return 2;
-    return 0;
-  }
-
-  void _onMobileTap(int index) {
-    if (index == 0) context.go('/');
-    if (index == 1) context.go('/bots');
-    if (index == 2) context.go('/settings');
   }
 }
 
@@ -1107,17 +868,15 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/models/models.dart';
-import 'package:osts_mobile_app/components/'
-    'chart/chart_point.dart';
-import 'package:osts_mobile_app/components/'
-    'chart/neon_chart_painter.dart';
+import 'package:osts_mobile_app/components/chart/chart_point.dart';
+import 'package:osts_mobile_app/components/chart/neon_chart_painter.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class PortfolioChart extends StatefulWidget {
   const PortfolioChart({super.key});
 
   @override
-  State<PortfolioChart> createState() =>
-      _PortfolioChartState();
+  State<PortfolioChart> createState() => _PortfolioChartState();
 }
 
 class _PortfolioChartState extends State<PortfolioChart> {
@@ -1131,23 +890,50 @@ class _PortfolioChartState extends State<PortfolioChart> {
     _generateData();
   }
 
+  // 1. СИНХРОНИЗИРОВАНО: Данные хранятся в чистом системном формате "день.месяц"
   void _generateData() {
     final days = [
-      '03 мая', '04 мая', '05 мая', '06 мая',
-      '07 мая', '08 мая', '09 мая', '10 мая',
-      '11 мая', '12 мая', '13 мая', '14 мая',
-      '15 мая', '16 мая', '17 мая', '18 мая'
+      '03.05', '04.05', '05.05', '06.05', '07.05', '08.05', '09.05',
+      '10.05', '11.05', '12.05', '13.05', '14.05', '15.05', '16.05',
+      '17.05', '18.05'
     ];
-    // ЖЕСТКИЙ ПРЕМИАЛЬНЫЙ РАСТУЩИЙ ТРЕНД
     final values = [
-      9210.0, 9340.0, 9280.0, 9460.0,
-      9520.0, 9410.0, 9630.0, 9580.0,
-      9740.0, 9690.0, 9850.0, 9920.0,
-      10120.0, 10050.0, 10260.0, 10480.0
+      9210.0, 9340.0, 9280.0, 9460.0, 9520.0, 9410.0, 9630.0, 9580.0,
+      9740.0, 9690.0, 9850.0, 9920.0, 10120.0, 10050.0, 10260.0, 10480.0
     ];
     for (int i = 0; i < days.length; i++) {
       _data.add(ChartPoint(days[i], values[i]));
     }
+  }
+
+  // Вспомогательный метод динамического перевода системной даты в красивую строку
+  String _formatDate(BuildContext context, String rawDate) {
+    final parts = rawDate.split('.');
+    if (parts.length != 2) return rawDate;
+
+    final String day = parts[0];
+    final String month = parts[1];
+
+    final bool isRu = I18n.of(context).currentLanguage == AppLanguage.ru;
+
+    // Полная карта всех месяцев года на двух языках
+    final Map<String, Map<String, String>> months = {
+      '01': {'ru': 'янв', 'en': 'Jan'},
+      '02': {'ru': 'фев', 'en': 'Feb'},
+      '03': {'ru': 'мар', 'en': 'Mar'},
+      '04': {'ru': 'апр', 'en': 'Apr'},
+      '05': {'ru': 'мая', 'en': 'May'},
+      '06': {'ru': 'июн', 'en': 'Jun'},
+      '07': {'ru': 'июл', 'en': 'Jul'},
+      '08': {'ru': 'авг', 'en': 'Aug'},
+      '09': {'ru': 'сен', 'en': 'Sep'},
+      '10': {'ru': 'окт', 'en': 'Oct'},
+      '11': {'ru': 'ноя', 'en': 'Nov'},
+      '12': {'ru': 'дек', 'en': 'Dec'},
+    };
+
+    final String monthLabel = months[month]?[isRu ? 'ru' : 'en'] ?? month;
+    return '$day $monthLabel';
   }
 
   void _updateHover(Offset localPos, Size size) {
@@ -1156,10 +942,7 @@ class _PortfolioChartState extends State<PortfolioChart> {
     if (chartX >= 0 && chartX <= chartW) {
       setState(() {
         _hoverPos = localPos;
-        _hoveredIndex = ((chartX / chartW) *
-            (_data.length - 1))
-            .round()
-            .clamp(0, _data.length - 1);
+        _hoveredIndex = ((chartX / chartW) * (_data.length - 1)).round().clamp(0, _data.length - 1);
       });
     } else {
       _resetHover();
@@ -1177,8 +960,7 @@ class _PortfolioChartState extends State<PortfolioChart> {
   Widget build(BuildContext context) {
     final isPos = _data.last.value >= _data.first.value;
     final isDark = AppTheme.isDark(context);
-    final accent =
-    isPos ? AppTheme.success : AppTheme.destructive;
+    final accent = isPos ? AppTheme.success : AppTheme.destructive;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1190,46 +972,19 @@ class _PortfolioChartState extends State<PortfolioChart> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Динамика портфеля',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.txt(context),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Последние 30 дней',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.txtMuted(context),
-            ),
-          ),
-          const SizedBox(height: 20),
           LayoutBuilder(
             builder: (context, constraints) {
               final chartW = constraints.maxWidth - 45;
               final widthStep = chartW / (_data.length - 1);
-
               double? focusX;
               double? focusY;
-
               if (_hoveredIndex != null) {
                 focusX = 45 + (_hoveredIndex! * widthStep);
-                final maxVal =
-                _data.map((e) => e.value).reduce(max);
-                final minVal =
-                _data.map((e) => e.value).reduce(min);
-                final valRange = (maxVal - minVal) == 0
-                    ? 1.0
-                    : (maxVal - minVal);
-                focusY = 195 -
-                    ((_data[_hoveredIndex!].value - minVal) /
-                        valRange) *
-                        195;
+                final maxVal = _data.map((e) => e.value).reduce(max);
+                final minVal = _data.map((e) => e.value).reduce(min);
+                final valRange = (maxVal - minVal) == 0 ? 1.0 : (maxVal - minVal);
+                focusY = 195 - ((_data[_hoveredIndex!].value - minVal) / valRange) * 195;
               }
-
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -1237,31 +992,22 @@ class _PortfolioChartState extends State<PortfolioChart> {
                     height: 220,
                     width: double.infinity,
                     child: GestureDetector(
-                      // ИСПРАВЛЕНО: Заменили Size constraints на реальный context box
                       onPanUpdate: (details) {
-                        final RenderBox box = context
-                            .findRenderObject() as RenderBox;
-                        _updateHover(
-                          details.localPosition,
-                          box.size,
-                        );
+                        final RenderBox box = context.findRenderObject() as RenderBox;
+                        _updateHover(details.localPosition, box.size);
                       },
                       onPanEnd: (_) => _resetHover(),
                       child: MouseRegion(
                         onHover: (event) {
-                          final RenderBox box = context
-                              .findRenderObject() as RenderBox;
-                          _updateHover(
-                            event.localPosition,
-                            box.size,
-                          );
+                          final RenderBox box = context.findRenderObject() as RenderBox;
+                          _updateHover(event.localPosition, box.size);
                         },
                         onExit: (_) => _resetHover(),
-                        // ИСПРАВЛЕНО: Аппаратная защита от вылетов линий Безье
                         child: ClipRect(
                           child: CustomPaint(
                             painter: NeonChartPainter(
-                              data: _data,
+                              // СИНХРОНИЗИРОВАНО: Локализуем даты динамически прямо перед отрисовкой
+                              data: _data.map((p) => ChartPoint(_formatDate(context, p.date), p.value)).toList(),
                               accentColor: accent,
                               gridColor: AppTheme.bd(context),
                               labelColor: AppTheme.txtMuted(context),
@@ -1277,10 +1023,7 @@ class _PortfolioChartState extends State<PortfolioChart> {
                       left: focusX,
                       top: 0,
                       bottom: 25,
-                      child: Container(
-                        width: 1,
-                        color: accent.withOpacity(0.2),
-                      ),
+                      child: Container(width: 1, color: accent.withOpacity(0.2)),
                     ),
                   if (focusX != null && focusY != null)
                     Positioned(
@@ -1292,25 +1035,14 @@ class _PortfolioChartState extends State<PortfolioChart> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: accent,
-                            width: 3,
-                          ),
+                          border: Border.all(color: accent, width: 3),
                           boxShadow: [
-                            BoxShadow(
-                              color: accent.withOpacity(
-                                isDark ? 0.6 : 0.4,
-                              ),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                            )
+                            BoxShadow(color: accent.withOpacity(isDark ? 0.6 : 0.4), blurRadius: 8, spreadRadius: 1)
                           ],
                         ),
                       ),
                     ),
-                  if (_hoveredIndex != null &&
-                      _hoverPos != null &&
-                      focusX != null)
+                  if (_hoveredIndex != null && _hoverPos != null && focusX != null)
                     _buildTooltipOverlay(focusX, isDark),
                 ],
               );
@@ -1325,7 +1057,6 @@ class _PortfolioChartState extends State<PortfolioChart> {
     final box = context.findRenderObject() as RenderBox;
     final pointY = _hoverPos!.dy.clamp(40.0, 160.0);
     final point = _data[_hoveredIndex!];
-
     return Positioned(
       left: (pointX - 60).clamp(50.0, box.size.width - 130),
       top: (pointY - 75).clamp(0.0, 120.0),
@@ -1338,33 +1069,17 @@ class _PortfolioChartState extends State<PortfolioChart> {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppTheme.bd(context)),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )
+              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                point.date,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.txtMuted(context),
-                ),
-              ),
+              // СИНХРОНИЗИРОВАНО: Динамический перевод даты внутри тултипа
+              Text(_formatDate(context, point.date), style: TextStyle(fontSize: 11, color: AppTheme.txtMuted(context))),
               const SizedBox(height: 2),
-              Text(
-                '\$${point.value.toLocale()}',
-                style: AppTheme.monoStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.txt(context),
-                ),
-              ),
+              Text('\$${point.value.toLocale()}', style: AppTheme.monoStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.txt(context))),
             ],
           ),
         ),
@@ -1381,347 +1096,47 @@ FILE: current_flutter/components/recent_trades_table.dart
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../models/models.dart';
+import '../init/i18n_manager.dart';
+import 'trades_table/table_header.dart';
+import 'trades_table/interactive_row.dart';
 
 class RecentTradesTable extends StatelessWidget {
   final int limit;
   final String? botId;
 
-  const RecentTradesTable({
-    super.key,
-    this.limit = 8,
-    this.botId,
-  });
+  const RecentTradesTable({super.key, this.limit = 8, this.botId});
 
   @override
   Widget build(BuildContext context) {
+    // Твои оригинальные моковые данные со всеми полями models.dart
     final List<Trade> trades = [
-      Trade(
-        id: 't1',
-        botId: '1',
-        botName: 'BTC Grid Premium',
-        type: 'buy',
-        tradingPair: 'BTC/USDT',
-        amount: 0.015,
-        price: 67200.0,
-        total: 1008.0,
-        profitLoss: 0.0,
-        fee: 1.0,
-        status: 'executed',
-        executedAt: DateTime.now().subtract(
-          const Duration(minutes: 12),
-        ),
-      ),
-      Trade(
-        id: 't2',
-        botId: '1',
-        botName: 'BTC Grid Premium',
-        type: 'sell',
-        tradingPair: 'BTC/USDT',
-        amount: 0.015,
-        price: 67550.0,
-        total: 1013.25,
-        profitLoss: 5.25,
-        fee: 1.01,
-        status: 'executed',
-        executedAt: DateTime.now().subtract(
-          const Duration(hours: 1),
-        ),
-      ),
+      Trade(id: 't1', botId: '1', botName: 'BTC Grid Premium', type: 'buy', tradingPair: 'BTC/USDT', amount: 0.015, price: 67200.0, total: 1008.0, profitLoss: 0.0, fee: 1.0, status: 'executed', executedAt: DateTime.now().subtract(const Duration(minutes: 12))),
+      Trade(id: 't2', botId: '1', botName: 'BTC Grid Premium', type: 'sell', tradingPair: 'BTC/USDT', amount: 0.015, price: 67550.0, total: 1013.25, profitLoss: 5.25, fee: 1.01, status: 'executed', executedAt: DateTime.now().subtract(const Duration(hours: 1))),
     ];
 
-    final filtered = botId != null
-        ? trades.where((t) => t.botId == botId).toList()
-        : trades;
+    final filtered = botId != null ? trades.where((t) => t.botId == botId).toList() : trades;
+    final width = MediaQuery.of(context).size.width;
+    final bool isWide = width > 600;
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.bd(context)),
-      ),
+      decoration: BoxDecoration(color: AppTheme.surface(context), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.bd(context))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Последние сделки',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.txt(context),
-            ),
-          ),
-          const SizedBox(height: 16),
           if (filtered.isEmpty)
-            _buildEmptyState(context)
-          else
-            _buildTable(context, filtered),
+            Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 32), child: Text(I18n.t(context, 'trades_table_empty'), style: TextStyle(color: AppTheme.txtMuted(context)))))
+          else ...[
+            TableHeaderRow(isWide: isWide),
+            Divider(color: AppTheme.bd(context), height: 1),
+            ...filtered.take(limit).map((trade) => InteractiveRow(trade: trade, showExtended: isWide)),
+          ],
         ],
       ),
     );
   }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 32,
-        ),
-        child: Text(
-          'Пока нет сделок',
-          style: TextStyle(
-            color: AppTheme.txtMuted(context),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTable(
-      BuildContext context,
-      List<Trade> items,
-      ) {
-    final width = MediaQuery.of(context).size.width;
-    final bool isWide = width > 600;
-
-    return Column(
-      children: [
-        Padding(
-          // ИСПРАВЛЕНО: Корректный конструктор отступов
-          padding: const EdgeInsets.symmetric(
-            horizontal: 8,
-          ).copyWith(bottom: 12),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: _th(context, 'Робот / Пара',
-                    left: true),
-              ),
-              Expanded(
-                flex: 2,
-                child: _th(context, 'Цена'),
-              ),
-              if (isWide) ...[
-                Expanded(
-                  flex: 2,
-                  child: _th(context, 'Объём'),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: _th(context, 'Время'),
-                ),
-              ],
-              Expanded(
-                flex: 2,
-                child: _th(context, 'PnL'),
-              ),
-            ],
-          ),
-        ),
-        Divider(color: AppTheme.bd(context), height: 1),
-        ...items.take(limit).map(
-              (trade) => _InteractiveRow(
-            trade: trade,
-            showExtended: isWide,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _th(
-      BuildContext context,
-      String label, {
-        bool left = false,
-      }) {
-    return Text(
-      label,
-      textAlign: left ? TextAlign.left : TextAlign.right,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: AppTheme.txtMuted(context),
-      ),
-    );
-  }
 }
 
-class _InteractiveRow extends StatefulWidget {
-  final Trade trade;
-  final bool showExtended;
-
-  const _InteractiveRow({
-    required this.trade,
-    required this.showExtended,
-  });
-
-  @override
-  State<_InteractiveRow> createState() =>
-      _InteractiveRowState();
-}
-
-class _InteractiveRowState extends State<_InteractiveRow> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isBuy = widget.trade.type == 'buy';
-    final pnl = widget.trade.profitLoss;
-    final isDark = AppTheme.isDark(context);
-
-    final Color liveColor = _isHovered
-        ? AppTheme.brand(context)
-        : AppTheme.txt(context);
-
-    final Color rowHoverColor = isDark
-        ? const Color(0xFF1A2131).withOpacity(0.2)
-        : const Color(0xFFE2E8F0).withOpacity(0.4);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: _isHovered ? rowHoverColor : Colors.transparent,
-          border: Border(
-            bottom: BorderSide(
-              color: AppTheme.bd(context).withOpacity(0.3),
-            ),
-          ),
-        ),
-        // ИСПРАВЛЕНО: Внедрен InkWell для тактильного неонового клика
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              // Заглушка под будущий роутинг /trades/tradeId илиBottomSheet
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: AppTheme.surface(context),
-                  content: Text(
-                    'Детали сделки ${widget.trade.id} скоро будут доступны',
-                    style: TextStyle(color: AppTheme.txt(context)),
-                  ),
-                ),
-              );
-            },
-            splashColor: AppTheme.brand(context).withOpacity(0.15),
-            highlightColor: AppTheme.brand(context).withOpacity(0.05),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 10,
-                horizontal: 8,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 150),
-                          style: AppTheme.monoStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: liveColor,
-                          ),
-                          child: Text(widget.trade.tradingPair),
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isBuy
-                                  ? Icons.arrow_upward
-                                  : Icons.arrow_downward,
-                              size: 10,
-                              color: isBuy
-                                  ? AppTheme.success
-                                  : AppTheme.destructive,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              isBuy ? 'Покупка' : 'Продажа',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: isBuy
-                                    ? AppTheme.success
-                                    : AppTheme.destructive,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 150),
-                      style: AppTheme.monoStyle(
-                        fontSize: 12,
-                        color: liveColor,
-                      ),
-                      textAlign: TextAlign.right,
-                      child: Text(
-                        '\$${widget.trade.price.toLocale()}',
-                      ),
-                    ),
-                  ),
-                  if (widget.showExtended) ...[
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        '\$${widget.trade.total.toLocale()}',
-                        textAlign: TextAlign.right,
-                        style: AppTheme.monoStyle(
-                          fontSize: 12,
-                          color: AppTheme.txtMuted(context),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        '${widget.trade.executedAt.hour.toString().padLeft(2, '0')}:'
-                            '${widget.trade.executedAt.minute.toString().padLeft(2, '0')}',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.txtMuted(context),
-                        ),
-                      ),
-                    ),
-                  ],
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      '${pnl >= 0 ? "+" : ""}${pnl.toStringAsFixed(2)}\$',
-                      textAlign: TextAlign.right,
-                      style: AppTheme.monoStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: pnl >= 0
-                            ? AppTheme.success
-                            : AppTheme.destructive,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 
 ================================================
@@ -1759,7 +1174,6 @@ class _StatCardState extends State<StatCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isPos = (widget.change ?? 0) >= 0;
     final isDark = AppTheme.isDark(context);
     final double width = MediaQuery.of(context).size.width;
     final double pad = width < 600 ? 12.0 : 20.0;
@@ -1775,173 +1189,125 @@ class _StatCardState extends State<StatCard> {
         ? AppTheme.brand(context).withOpacity(0.3)
         : const Color(0xFF64748B);
 
-    final List<BoxShadow>? currentShadow = _isHovered
-        ? [
-      isDark
-          ? BoxShadow(
-        color: AppTheme.brand(context)
-            .withOpacity(0.05),
-        blurRadius: 16,
-        spreadRadius: 1,
-      )
-          : BoxShadow(
-        color: Colors.black.withOpacity(0.04),
-        blurRadius: 12,
-        offset: const Offset(0, 4),
-      )
-    ]
-        : null;
-
-    final Color iconBgColor = isDark
-        ? AppTheme.brand(context)
-        .withOpacity(_isHovered ? 0.2 : 0.1)
-        : AppTheme.brand(context)
-        .withOpacity(_isHovered ? 0.15 : 0.08);
-
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        // ИСПРАВЛЕНО: Убрали паддинг отсюда, чтобы InkWell прижался к краям
-        padding: EdgeInsets.zero,
+        // ИСПРАВЛЕНИЕ: Никакой фиксированной высоты. Полная свобода для контента.
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _isHovered
-                ? borderHoverColor
-                : AppTheme.bd(context),
+            color: _isHovered ? borderHoverColor : AppTheme.bd(context),
             width: 1.0,
           ),
-          boxShadow: currentShadow,
         ),
-        // ИСПРАВЛЕНО: Иерархия перевернута. InkWell теперь на самом верху!
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(11),
-            splashColor:
-            AppTheme.brand(context).withOpacity(0.12),
             onTap: () {},
-            // ИСПРАВЛЕНО: Паддинг перенесен внутрь кликабельной зоны
             child: Padding(
               padding: EdgeInsets.all(pad),
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // 1. Первая строка: Заголовок и Иконка
                   Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
                           widget.title,
                           maxLines: 1,
-                          overflow:
-                          TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize:
-                            width < 600 ? 12 : 14,
+                            fontSize: width < 600 ? 12 : 14,
                             fontWeight: FontWeight.w500,
-                            color: AppTheme.txtMuted(
-                              context,
-                            ),
+                            color: AppTheme.txtMuted(context),
                           ),
                         ),
                       ),
-                      if (widget.icon != null &&
-                          width > 350)
-                        Container(
-                          padding:
-                          const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: iconBgColor,
-                            borderRadius:
-                            BorderRadius.circular(
-                              6,
-                            ),
-                          ),
-                          child: AnimatedScale(
-                            scale: _isHovered ? 1.12 : 1.0,
-                            duration: const Duration(
-                              milliseconds: 200,
-                            ),
-                            child: Icon(
-                              widget.icon,
-                              size: 14,
-                              color: AppTheme.brand(
-                                context,
-                              ),
-                            ),
-                          ),
-                        ),
+                      if (widget.icon != null && width > 350)
+                        Icon(widget.icon, size: 14, color: AppTheme.brand(context)),
                     ],
                   ),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: widget.value,
-                          style: TextStyle(
-                            fontSize: width < 600
-                                ? 18
-                                : 22,
-                            color: valColor,
-                            fontWeight:
-                            FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        if (widget.change != null) ...[
-                          const WidgetSpan(
-                            alignment: PlaceholderAlignment
-                                .baseline,
-                            baseline:
-                            TextBaseline.alphabetic,
-                            child: SizedBox(width: 6),
-                          ),
-                          TextSpan(
-                            text: '${isPos ? "▲" : "▼"} '
-                                '${widget.change!.toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight:
-                              FontWeight.bold,
-                              color: isPos
-                                  ? AppTheme.success
-                                  : AppTheme
-                                  .destructive,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (widget.changeLabel != null)
-                    Text(
-                      widget.changeLabel!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.txtMuted(
-                          context,
-                        ),
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+
+                  // 2. Вторая строка: Баланс / Значение + Проценты
+                  _buildValueBlock(width, valColor),
+
+                  // 3. Третья строка: Подзаголовок (или его невидимый двойник-заглушка)
+                  const SizedBox(height: 4),
+                  _buildFooterLabel(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildValueBlock(double width, Color valColor) {
+    final isPos = (widget.change ?? 0) >= 0;
+
+    // Если процентов нет, рендерим невидимую заглушку для сохранения единой высоты строки
+    final Widget changeWidget = widget.change != null
+        ? Text(
+      ' ${isPos ? "▲" : "▼"} ${widget.change!.toStringAsFixed(0)}%',
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        color: isPos ? AppTheme.success : AppTheme.destructive,
+      ),
+    )
+        : const Opacity(
+      opacity: 0,
+      child: Text(' ▲ 0%', style: TextStyle(fontSize: 11)),
+    );
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: widget.value,
+            style: TextStyle(
+              fontSize: width < 600 ? 18 : 22,
+              color: valColor,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+          ),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: changeWidget,
+          ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildFooterLabel() {
+    // Сохраняем физическое место под третью строчку, даже если лейбла нет
+    if (widget.changeLabel != null) {
+      return Text(
+        widget.changeLabel!,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 11, color: AppTheme.txtMuted(context)),
+      );
+    }
+    return const Opacity(
+      opacity: 0,
+      child: Text('Placeholder', style: TextStyle(fontSize: 11)),
     );
   }
 }
@@ -2212,6 +1578,452 @@ class BotCardMiniStat extends StatelessWidget {
 
 
 ================================================
+FILE: current_flutter/components/layout/app_bottom_bar.dart
+================================================
+import 'package:flutter/material.dart';
+import 'package:osts_mobile_app/app_theme.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
+
+class AppBottomBar extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const AppBottomBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      currentIndex: currentIndex,
+      onTap: onTap, // Передаем управление напрямую в оригинальный коллбэк layout.dart
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: AppTheme.surface(context),
+      selectedItemColor: AppTheme.brand(context),
+      unselectedItemColor: AppTheme.txtMuted(context),
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
+      selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+      unselectedLabelStyle: const TextStyle(fontSize: 11),
+      items: [
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.dashboard_outlined, size: 20),
+          activeIcon: const Icon(Icons.dashboard, size: 20),
+          label: I18n.t(context, 'nav_overview'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.smart_toy_outlined, size: 20),
+          activeIcon: const Icon(Icons.smart_toy, size: 20),
+          label: I18n.t(context, 'nav_bots'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.analytics_outlined, size: 20),
+          activeIcon: const Icon(Icons.analytics, size: 20),
+          label: I18n.t(context, 'nav_analytics'),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+================================================
+FILE: current_flutter/components/layout/app_sidebar.dart
+================================================
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:osts_mobile_app/app_theme.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
+import 'package:osts_mobile_app/components/layout/interactive_nav_item.dart';
+import 'package:osts_mobile_app/components/layout/footer_action_button.dart';
+import 'package:osts_mobile_app/config.dart';
+
+class AppSidebar extends StatefulWidget {
+  final int currentIndex;
+  final Function(int) onItemTapped;
+
+  const AppSidebar({
+    super.key,
+    required this.currentIndex,
+    required this.onItemTapped,
+  });
+
+  @override
+  State<AppSidebar> createState() => _AppSidebarState();
+}
+
+class _AppSidebarState extends State<AppSidebar> {
+  bool _isSidebarCollapsed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final double sidebarWidth = _isSidebarCollapsed ? 72.0 : 240.0;
+
+    // Получаем текущий путь для визуальной подсветки элементов (isCurrent под капотом)
+    final String currentPath = GoRouterState.of(context).uri.path;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      width: sidebarWidth,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        border: Border(
+          right: BorderSide(color: AppTheme.bd(context), width: 1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                Icon(Icons.bolt, color: AppTheme.brand(context), size: 28),
+                if (!_isSidebarCollapsed) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    AppConfig.appName,
+                    style: TextStyle(
+                      color: AppTheme.txt(context),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ListView(
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  // Клики строго дергают onItemTapped, а пути передаются только для сверки активности внутри InteractiveNavItem
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onItemTapped(0),
+                    child: InteractiveNavItem(
+                      icon: Icons.dashboard_outlined,
+                      label: I18n.t(context, 'nav_overview'),
+                      path: '/dashboard',
+                      currentPath: currentPath,
+                      isCollapsed: _isSidebarCollapsed,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onItemTapped(1),
+                    child: InteractiveNavItem(
+                      icon: Icons.smart_toy_outlined,
+                      label: I18n.t(context, 'nav_bots'),
+                      path: '/bots',
+                      currentPath: currentPath,
+                      isCollapsed: _isSidebarCollapsed,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onItemTapped(2),
+                    child: InteractiveNavItem(
+                      icon: Icons.analytics_outlined,
+                      label: I18n.t(context, 'nav_analytics'),
+                      path: '/analytics',
+                      currentPath: currentPath,
+                      isCollapsed: _isSidebarCollapsed,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onItemTapped(3),
+                    child: InteractiveNavItem(
+                      icon: Icons.vpn_key_outlined,
+                      label: I18n.t(context, 'nav_api_keys'),
+                      path: '/api-keys',
+                      currentPath: currentPath,
+                      isCollapsed: _isSidebarCollapsed,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onItemTapped(4),
+                    child: InteractiveNavItem(
+                      icon: Icons.settings_outlined,
+                      label: I18n.t(context, 'nav_settings'),
+                      path: '/settings',
+                      currentPath: currentPath,
+                      isCollapsed: _isSidebarCollapsed,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              children: [
+                FooterActionButton(
+                  icon: _isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left,
+                  label: I18n.t(context, 'nav_collapse'),
+                  isCollapsed: _isSidebarCollapsed,
+                  onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+                ),
+                const SizedBox(height: 6),
+                FooterActionButton(
+                  icon: Icons.logout,
+                  label: I18n.t(context, 'nav_logout'),
+                  isCollapsed: _isSidebarCollapsed,
+                  onTap: () => context.go('/login'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+================================================
+FILE: current_flutter/components/layout/app_top_bar.dart
+================================================
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:osts_mobile_app/app_theme.dart';
+import 'package:osts_mobile_app/main.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
+
+class AppTopBar extends StatelessWidget {
+  final bool isMobile;
+
+  const AppTopBar({super.key, required this.isMobile});
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLanguage currentLang = I18n.of(context).currentLanguage;
+
+    if (!isMobile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            // 1. Уведомления (Колокольчик)
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, size: 20),
+              onPressed: () => context.go('/notifications'),
+            ),
+            const SizedBox(width: 4),
+
+            // 2. Переключатель темы оформления (Солнышко)
+            IconButton(
+              icon: Icon(AppTheme.isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 20),
+              onPressed: () => themeNotifier.value = AppTheme.isDark(context) ? ThemeMode.light : ThemeMode.dark,
+            ),
+            const SizedBox(width: 4),
+
+            // 3. Выбор языка с динамическим флагом активной локали
+            PopupMenuButton<AppLanguage>(
+              icon: Text(
+                currentLang == AppLanguage.ru ? '🇷🇺' : '🇺🇸',
+                style: const TextStyle(fontSize: 20),
+              ),
+              tooltip: 'Смена языка / Change Language',
+              color: AppTheme.surface(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: AppTheme.bd(context), width: 1),
+              ),
+              onSelected: (AppLanguage language) {
+                i18nNotifier.setLanguage(language);
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<AppLanguage>>[
+                PopupMenuItem<AppLanguage>(
+                  value: AppLanguage.ru,
+                  child: Row(
+                    children: [
+                      const Text('🇷🇺  ', style: TextStyle(fontSize: 16)),
+                      Text(
+                        'Русский',
+                        style: TextStyle(
+                          color: currentLang == AppLanguage.ru ? AppTheme.brand(context) : AppTheme.txt(context),
+                          fontWeight: currentLang == AppLanguage.ru ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      if (currentLang == AppLanguage.ru) ...[
+                        const Spacer(),
+                        Icon(Icons.check, size: 16, color: AppTheme.brand(context)),
+                      ]
+                    ],
+                  ),
+                ),
+                PopupMenuItem<AppLanguage>(
+                  value: AppLanguage.en,
+                  child: Row(
+                    children: [
+                      const Text('🇺🇸  ', style: TextStyle(fontSize: 16)),
+                      Text(
+                        'English',
+                        style: TextStyle(
+                          color: currentLang == AppLanguage.en ? AppTheme.brand(context) : AppTheme.txt(context),
+                          fontWeight: currentLang == AppLanguage.en ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      if (currentLang == AppLanguage.en) ...[
+                        const Spacer(),
+                        Icon(Icons.check, size: 16, color: AppTheme.brand(context)),
+                      ]
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // 4. Вертикальный разделитель зон
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: SizedBox(
+                height: 20,
+                child: VerticalDivider(width: 1, thickness: 1, color: AppTheme.bd(context)),
+              ),
+            ),
+
+            // 5. Твой оригинальный аватар с неоновой рамкой
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.brand(context).withOpacity(0.5), width: 1.5),
+                image: const DecorationImage(
+                  image: NetworkImage('https://unsplash.com'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      height: 40.0,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => Scaffold.of(context).openDrawer(),
+              child: const Center(child: Icon(Icons.menu, size: 22)),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Мобильный переключатель языка с флагом
+              PopupMenuButton<AppLanguage>(
+                icon: Text(
+                  currentLang == AppLanguage.ru ? '🇷🇺' : '🇺🇸',
+                  style: const TextStyle(fontSize: 18),
+                ),
+                tooltip: 'Language',
+                color: AppTheme.surface(context),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: AppTheme.bd(context), width: 1),
+                ),
+                onSelected: (AppLanguage language) {
+                  i18nNotifier.setLanguage(language);
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<AppLanguage>>[
+                  PopupMenuItem<AppLanguage>(
+                    value: AppLanguage.ru,
+                    child: Row(
+                      children: [
+                        const Text('🇷🇺  ', style: TextStyle(fontSize: 16)),
+                        Text(
+                          'Русский',
+                          style: TextStyle(
+                            color: currentLang == AppLanguage.ru ? AppTheme.brand(context) : AppTheme.txt(context),
+                            fontWeight: currentLang == AppLanguage.ru ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        if (currentLang == AppLanguage.ru) ...[
+                          const Spacer(),
+                          Icon(Icons.check, size: 16, color: AppTheme.brand(context)),
+                        ]
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<AppLanguage>(
+                    value: AppLanguage.en,
+                    child: Row(
+                      children: [
+                        const Text('🇺🇸  ', style: TextStyle(fontSize: 16)),
+                        Text(
+                          'English',
+                          style: TextStyle(
+                            color: currentLang == AppLanguage.en ? AppTheme.brand(context) : AppTheme.txt(context),
+                            fontWeight: currentLang == AppLanguage.en ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        if (currentLang == AppLanguage.en) ...[
+                          const Spacer(),
+                          Icon(Icons.check, size: 16, color: AppTheme.brand(context)),
+                        ]
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => themeNotifier.value = AppTheme.isDark(context) ? ThemeMode.light : ThemeMode.dark,
+                  child: Center(child: Icon(AppTheme.isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 20)),
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => context.go('/notifications'),
+                  child: const Center(child: Icon(Icons.notifications_outlined, size: 20)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+================================================
 FILE: current_flutter/components/layout/footer_action_button.dart
 ================================================
 import 'package:flutter/material.dart';
@@ -2428,6 +2240,133 @@ class _InteractiveNavItemState
 
 
 ================================================
+FILE: current_flutter/components/trades_table/interactive_row.dart
+================================================
+import 'package:flutter/material.dart';
+import 'package:osts_mobile_app/app_theme.dart';
+import 'package:osts_mobile_app/models/models.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
+
+class InteractiveRow extends StatefulWidget {
+  final Trade trade;
+  final bool showExtended;
+  const InteractiveRow({super.key, required this.trade, required this.showExtended});
+
+  @override
+  State<InteractiveRow> createState() => _InteractiveRowState();
+}
+
+class _InteractiveRowState extends State<InteractiveRow> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isBuy = widget.trade.type == 'buy';
+    final pnl = widget.trade.profitLoss;
+    final isDark = AppTheme.isDark(context);
+    final Color liveColor = _isHovered ? AppTheme.brand(context) : AppTheme.txt(context);
+    final Color hoverBg = isDark ? const Color(0xFF1A2131).withOpacity(0.2) : const Color(0xFFE2E8F0).withOpacity(0.4);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(color: _isHovered ? hoverBg : Colors.transparent, border: Border(bottom: BorderSide(color: AppTheme.bd(context).withOpacity(0.3)))),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              final text = I18n.t(context, 'trades_toast_details').replaceAll('{id}', widget.trade.id);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: AppTheme.surface(context), content: Text(text, style: TextStyle(color: AppTheme.txt(context)))));
+            },
+            splashColor: AppTheme.brand(context).withOpacity(0.15),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AnimatedDefaultTextStyle(duration: const Duration(milliseconds: 150), style: AppTheme.monoStyle(fontSize: 13, fontWeight: FontWeight.w600, color: liveColor), child: Text(widget.trade.tradingPair)),
+                        const SizedBox(height: 3),
+
+                        // ДОБАВЛЕНО: Вывод имени робота мелким приглушенным текстом по сетке терминала
+                        Text(
+                          widget.trade.botName,
+                          style: TextStyle(fontSize: 11, color: AppTheme.txtMuted(context)),
+                        ),
+                        const SizedBox(height: 3),
+
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(isBuy ? Icons.arrow_upward : Icons.arrow_downward, size: 10, color: isBuy ? AppTheme.success : AppTheme.destructive),
+                          const SizedBox(width: 2),
+                          Text(isBuy ? I18n.t(context, 'trades_type_buy') : I18n.t(context, 'trades_type_sell'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isBuy ? AppTheme.success : AppTheme.destructive)),
+                        ]),
+                      ],
+                    ),
+                  ),
+                  Expanded(flex: 2, child: AnimatedDefaultTextStyle(duration: const Duration(milliseconds: 150), style: AppTheme.monoStyle(fontSize: 12, color: liveColor), textAlign: TextAlign.right, child: Text('\$${widget.trade.price.toLocale()}'))),
+                  if (widget.showExtended) ...[
+                    Expanded(flex: 2, child: Text('\$${widget.trade.total.toLocale()}', textAlign: TextAlign.right, style: AppTheme.monoStyle(fontSize: 12, color: AppTheme.txtMuted(context)))),
+                    Expanded(flex: 2, child: Text('${widget.trade.executedAt.hour.toString().padLeft(2, '0')}:${widget.trade.executedAt.minute.toString().padLeft(2, '0')}', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: AppTheme.txtMuted(context)))),
+                  ],
+                  Expanded(flex: 2, child: Text('${pnl >= 0 ? "+" : ""}${pnl.toStringAsFixed(2)}\$', textAlign: TextAlign.right, style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold, color: pnl >= 0 ? AppTheme.success : AppTheme.destructive))),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+================================================
+FILE: current_flutter/components/trades_table/table_header.dart
+================================================
+import 'package:flutter/material.dart';
+import 'package:osts_mobile_app/app_theme.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
+
+class TableHeaderRow extends StatelessWidget {
+  final bool isWide;
+  const TableHeaderRow({super.key, required this.isWide});
+
+  Widget _th(BuildContext context, String label, {bool left = false}) {
+    return Text(
+      label,
+      textAlign: left ? TextAlign.left : TextAlign.right,
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.txtMuted(context)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8).copyWith(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: _th(context, I18n.t(context, 'trades_table_th_pair'), left: true)),
+          Expanded(flex: 2, child: _th(context, I18n.t(context, 'trades_table_th_price'))),
+          if (isWide) ...[
+            Expanded(flex: 2, child: _th(context, I18n.t(context, 'trades_table_th_volume'))),
+            Expanded(flex: 2, child: _th(context, I18n.t(context, 'trades_table_th_time'))),
+          ],
+          Expanded(flex: 2, child: _th(context, I18n.t(context, 'trades_table_th_pnl'))),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+================================================
 FILE: current_flutter/components/ui/osts_button.dart
 ================================================
 import 'package:flutter/material.dart';
@@ -2450,8 +2389,7 @@ class OstsButton extends StatefulWidget {
   });
 
   @override
-  State<OstsButton> createState() =>
-      _OstsButtonState();
+  State<OstsButton> createState() => _OstsButtonState();
 }
 
 class _OstsButtonState extends State<OstsButton> {
@@ -2461,67 +2399,55 @@ class _OstsButtonState extends State<OstsButton> {
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
     final brand = AppTheme.brand(context);
-    final isPrimary =
-        widget.variant == OstsButtonVariant.primary;
+    final isPrimary = widget.variant == OstsButtonVariant.primary;
 
     Color bgColor;
     if (isPrimary) {
-      bgColor = _isHovered
-          ? brand.withOpacity(0.92)
-          : brand;
+      bgColor = _isHovered ? brand.withOpacity(0.92) : brand;
     } else {
-      bgColor = _isHovered
-          ? brand.withOpacity(0.12)
-          : Colors.transparent;
+      bgColor = _isHovered ? brand.withOpacity(0.12) : Colors.transparent;
     }
 
-    final bdColor = isPrimary
-        ? Colors.transparent
-        : brand;
-
-    final defaultPrimaryText = isDark
-        ? AppTheme.darkBg
-        : Colors.white;
-
-    final contentColor = isPrimary
-        ? defaultPrimaryText
-        : (_isHovered
-        ? brand
-        : brand.withOpacity(0.8));
+    final bdColor = isPrimary ? Colors.transparent : brand;
+    final defaultPrimaryText = isDark ? AppTheme.darkBg : Colors.white;
+    final contentColor = isPrimary ? defaultPrimaryText : (_isHovered ? brand : brand.withOpacity(0.8));
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Material(
-        type: MaterialType.canvas,
-        color: bgColor,
-        // Оформление границ без AnimatedContainer
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: bdColor),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
+          boxShadow: _isHovered && isPrimary ? [
+            BoxShadow(
+              color: brand.withOpacity(0.25),
+              blurRadius: 16,
+              spreadRadius: 1,
+            )
+          ] : null,
         ),
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(12),
-          // Тот самый контрастный неоновый всплеск
-          splashColor: brand.withOpacity(0.4),
-          highlightColor: brand.withOpacity(0.2),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            child: Center(
+        child: Material(
+          type: MaterialType.canvas,
+          color: bgColor, // Цвет фона СТРОГО в Material для работы волны
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: bdColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(12),
+            splashColor: isPrimary ? defaultPrimaryText.withOpacity(0.2) : brand.withOpacity(0.25),
+            highlightColor: brand.withOpacity(0.08),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (widget.icon != null) ...[
-                    Icon(
-                      widget.icon,
-                      color: contentColor,
-                      size: 18,
-                    ),
+                    Icon(widget.icon, color: contentColor, size: 18),
                     const SizedBox(width: 8),
                   ],
                   Text(
@@ -2657,6 +2583,180 @@ class WebInitializer implements AppInitializer {
 
 Future<AppInitializer> getInitializer() async =>
     WebInitializer();
+
+
+
+================================================
+FILE: current_flutter/init/i18n_manager.dart
+================================================
+import 'package:flutter/material.dart';
+
+enum AppLanguage { ru, en }
+
+class I18n extends InheritedNotifier<I18nNotifier> {
+  const I18n({
+    super.key,
+    required super.notifier,
+    required super.child,
+  });
+
+  static I18nNotifier of(BuildContext context) {
+    final I18n? inherited = context.dependOnInheritedWidgetOfExactType<I18n>();
+    assert(inherited != null, 'No I18n found in context');
+    return inherited!.notifier!;
+  }
+
+  static String t(BuildContext context, String key) {
+    final lang = of(context).currentLanguage;
+    return _localizedValues[lang]?[key] ?? key;
+  }
+
+  static const Map<AppLanguage, Map<String, String>> _localizedValues = {
+    AppLanguage.ru: {
+      // Сайдбар и Навигация
+      'nav_overview': 'Обзор',
+      'nav_bots': 'Боты',
+      'nav_analytics': 'Аналитика',
+      'nav_api_keys': 'API Ключи',
+      'nav_settings': 'Настройки',
+      'nav_logout': 'Выход',
+      'nav_collapse': 'Свернуть',
+      'nav_expand': 'Развернуть',
+
+      // Дашборд
+      'dash_welcome': 'Добро пожаловать',
+      'dash_overview': 'Обзор вашего торгового портфеля',
+      'dash_total_balance': 'Общий баланс',
+      'dash_active_bots': 'Активные боты',
+      'dash_total_pnl': 'Общий PnL',
+      'dash_total_trades': 'Всего сделок',
+      'dash_chart_title': 'Динамика портфеля',
+      'dash_chart_sub': 'Последние 30 дней',
+      'dash_active_section': 'Активные боты',
+      'dash_all_bots_link': 'Все боты →',
+
+      // Страница ботов
+      'bots_title': 'Торговые боты',
+      'bots_subtitle': 'Управление автоматическими стратегиями',
+      'bots_btn_create': 'Создать',
+      'bots_search_hint': 'Поиск по имени или паре...',
+      'bots_filter_all': 'Все',
+      'bots_filter_active': 'Активные',
+      'bots_filter_paused': 'На паузе',
+      'bots_filter_stopped': 'Остановлены',
+      'bots_not_found': 'Роботы не найдены',
+      'bots_empty_title': 'Создайте первого бота',
+      'bots_empty_desc': 'Настройте торговую стратегию и запустите автоматическую торговлю',
+
+      // Модальное окно создания бота (Строгие префиксы)
+      'create_bot_modal_title': 'Создание робота',
+      'create_bot_modal_name_label': 'Имя робота',
+      'create_bot_modal_name_hint': 'Например, BTC Scalper',
+      'create_bot_modal_name_error': 'Введите имя',
+      'create_bot_modal_exchange_label': 'Биржа',
+      'create_bot_modal_pair_label': 'Торговая пара',
+      'create_bot_modal_capital_label': 'Стартовый капитал',
+      'create_bot_modal_cancel': 'Отмена',
+      'create_bot_modal_launch': 'Запустить',
+      'create_bot_modal_success_toast': 'Робот {name} создан',
+
+      // Общие компоненты
+      'trades_table_title': 'Последние сделки',
+      'trades_table_empty': 'Пока нет сделок',
+      'trades_table_empty_sub': 'Запустите бота, чтобы увидеть торговую активность',
+      'trades_table_th_pair': 'Пара',
+      'trades_table_th_type': 'Тип',
+      'trades_table_th_price': 'Цена',
+      'trades_table_th_volume': 'Объём',
+      'trades_table_th_pnl': 'PnL',
+      'trades_table_th_time': 'Время',
+      'trades_type_buy': 'Покупка',
+      'trades_type_sell': 'Продажа',
+      'trades_toast_details': 'Детали сделки {id} скоро будут доступны',
+      'lang_ru': 'Русский',
+      'lang_en': 'English',
+    },
+    AppLanguage.en: {
+      // Sidebar & Navigation
+      'nav_overview': 'Overview',
+      'nav_bots': 'Bots',
+      'nav_analytics': 'Analytics',
+      'nav_api_keys': 'API Keys',
+      'nav_settings': 'Settings',
+      'nav_logout': 'Logout',
+      'nav_collapse': 'Collapse',
+      'nav_expand': 'Expand',
+
+      // Dashboard
+      'dash_welcome': 'Welcome',
+      'dash_overview': 'Overview of your trading portfolio',
+      'dash_total_balance': 'Total Balance',
+      'dash_active_bots': 'Active Bots',
+      'dash_total_pnl': 'Total PnL',
+      'dash_total_trades': 'Total Trades',
+      'dash_chart_title': 'Portfolio Performance',
+      'dash_chart_sub': 'Last 30 days',
+      'dash_active_section': 'Active Bots',
+      'dash_all_bots_link': 'All bots →',
+
+      // Bots Page
+      'bots_title': 'Trading Bots',
+      'bots_subtitle': 'Manage automated trading strategies',
+      'bots_btn_create': 'Create',
+      'bots_search_hint': 'Search by name or pair...',
+      'bots_filter_all': 'All',
+      'bots_filter_active': 'Active',
+      'bots_filter_paused': 'Paused',
+      'bots_filter_stopped': 'Stopped',
+      'bots_not_found': 'Robots not found',
+      'bots_empty_title': 'Create your first bot',
+      'bots_empty_desc': 'Configure a trading strategy and launch automated trading',
+
+      // Create Bot Modal (Strict prefixes)
+      'create_bot_modal_title': 'Create Robot',
+      'create_bot_modal_name_label': 'Robot Name',
+      'create_bot_modal_name_hint': 'e.g., BTC Scalper',
+      'create_bot_modal_name_error': 'Please enter a name',
+      'create_bot_modal_exchange_label': 'Exchange',
+      'create_bot_modal_pair_label': 'Trading Pair',
+      'create_bot_modal_capital_label': 'Starting Capital',
+      'create_bot_modal_cancel': 'Cancel',
+      'create_bot_modal_launch': 'Launch',
+      'create_bot_modal_success_toast': 'Bot {name} created',
+
+      // Common Components
+      'trades_table_title': 'Recent Trades',
+      'trades_table_empty': 'No trades yet',
+      'trades_table_empty_sub': 'Launch a bot to see trading activity',
+      'trades_table_th_pair': 'Pair',
+      'trades_table_th_type': 'Type',
+      'trades_table_th_price': 'Price',
+      'trades_table_th_volume': 'Volume',
+      'trades_table_th_pnl': 'PnL',
+      'trades_table_th_time': 'Time',
+      'trades_type_buy': 'Buy',
+      'trades_type_sell': 'Sell',
+      'trades_toast_details': 'Trade details for {id} will be available soon',
+      'lang_ru': 'Russian',
+      'lang_en': 'English',
+    }
+  };
+}
+
+class I18nNotifier extends ChangeNotifier {
+  AppLanguage _currentLang = AppLanguage.ru;
+
+  AppLanguage get currentLanguage => _currentLang;
+
+  void setLanguage(AppLanguage lang) {
+    if (_currentLang != lang) {
+      _currentLang = lang;
+      notifyListeners();
+    }
+  }
+}
+
+final i18nNotifier = I18nNotifier();
 
 
 
@@ -3123,8 +3223,8 @@ import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/pages/bots/bots_filters.dart';
 import 'package:osts_mobile_app/pages/bots/bots_list_view.dart';
 import 'package:osts_mobile_app/pages/bots/create_bot_dialog.dart';
-// Абсолютный импорт нашей новой глобальной UI кнопки
 import 'package:osts_mobile_app/components/ui/osts_button.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class BotsPage extends StatefulWidget {
   const BotsPage({super.key});
@@ -3137,6 +3237,7 @@ class _BotsPageState extends State<BotsPage> {
   String _activeTab = 'all';
   String _searchQuery = '';
 
+  // ВОССТАНОВЛЕНО: Полный массив ботов со всеми терминальными статусами
   final List<Bot> _allBots = [
     Bot(
       id: '1',
@@ -3189,6 +3290,40 @@ class _BotsPageState extends State<BotsPage> {
       winRate: 52.1,
       maxDrawdown: 6.8,
     ),
+    Bot(
+      id: '4',
+      name: 'XRP Reversal Pro',
+      description: 'Контртрендовая стратегия',
+      strategy: 'grid',
+      status: 'stopped', // Восстановленный статус
+      exchange: 'binance',
+      tradingPair: 'XRP/USDT',
+      initialCapital: 4000.0,
+      currentBalance: 4000.0,
+      profitLoss: 0.0,
+      profitLossPercent: 0.0,
+      riskLevel: 'medium',
+      totalTrades: 310,
+      winRate: 61.2,
+      maxDrawdown: 3.9,
+    ),
+    Bot(
+      id: '5',
+      name: 'ADA Breakout Multi',
+      description: 'Пробой уровней поддержки',
+      strategy: 'breakout',
+      status: 'stopped', // Восстановленный статус
+      exchange: 'bybit',
+      tradingPair: 'ADA/USDT',
+      initialCapital: 2500.0,
+      currentBalance: 2100.0,
+      profitLoss: -400.0,
+      profitLossPercent: -16.0,
+      riskLevel: 'high',
+      totalTrades: 45,
+      winRate: 40.0,
+      maxDrawdown: 18.2,
+    ),
   ];
 
   void _showCreateDialog() {
@@ -3204,18 +3339,18 @@ class _BotsPageState extends State<BotsPage> {
     final double width = MediaQuery.of(context).size.width;
     final bool isMobile = width < 600;
 
+    // ВОССТАНОВЛЕНО: Строгая фильтрация по всем 4 вкладкам, включая stopped
     List<Bot> filtered = _allBots.where((bot) {
       if (_activeTab == 'active') return bot.status == 'active';
       if (_activeTab == 'paused') return bot.status == 'paused';
+      if (_activeTab == 'stopped') return bot.status == 'stopped';
       return true;
     }).toList();
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((bot) {
-        final nameMatch = bot.name.toLowerCase()
-            .contains(_searchQuery.toLowerCase());
-        final pairMatch = bot.tradingPair.toLowerCase()
-            .contains(_searchQuery.toLowerCase());
+        final nameMatch = bot.name.toLowerCase().contains(_searchQuery.toLowerCase());
+        final pairMatch = bot.tradingPair.toLowerCase().contains(_searchQuery.toLowerCase());
         return nameMatch || pairMatch;
       }).toList();
     }
@@ -3231,29 +3366,19 @@ class _BotsPageState extends State<BotsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Торговые боты',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.txt(context),
-                    letterSpacing: -0.5,
-                  ),
+                  I18n.t(context, 'bots_title'),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.txt(context), letterSpacing: -0.5),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Управление автоматическими стратегиями',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.txtMuted(context),
-                  ),
+                  I18n.t(context, 'bots_subtitle'),
+                  style: TextStyle(fontSize: 13, color: AppTheme.txtMuted(context)),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  // ИСПРАВЛЕНО: Применяем наш глобальный UI-виджет кнопки
                   child: OstsButton(
-                    label: 'Создать',
-                    icon: Icons.add,
+                    label: I18n.t(context, 'bots_btn_create'),
                     onTap: _showCreateDialog,
                   ),
                 ),
@@ -3268,31 +3393,22 @@ class _BotsPageState extends State<BotsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Торговые боты',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.txt(context),
-                          letterSpacing: -0.5,
-                        ),
+                        I18n.t(context, 'bots_title'),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.txt(context), letterSpacing: -0.5),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Управление автоматическими стратегиями',
+                        I18n.t(context, 'bots_subtitle'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.txtMuted(context),
-                        ),
+                        style: TextStyle(fontSize: 13, color: AppTheme.txtMuted(context)),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
-                // ИСПРАВЛЕНО: Глобальный UI-виджет кнопки на десктопе
                 OstsButton(
-                  label: 'Создать',
+                  label: I18n.t(context, 'bots_btn_create'),
                   icon: Icons.add,
                   onTap: _showCreateDialog,
                 ),
@@ -3318,15 +3434,15 @@ class _BotsPageState extends State<BotsPage> {
 FILE: current_flutter/pages/dashboard_page.dart
 ================================================
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/components/portfolio_chart.dart';
 import 'package:osts_mobile_app/components/recent_trades_table.dart';
-import 'package:osts_mobile_app/pages/dashboard/'
-    'dashboard_header.dart';
-import 'package:osts_mobile_app/pages/dashboard/'
-    'dashboard_stats_grid.dart';
-import 'package:osts_mobile_app/pages/dashboard/'
-    'dashboard_bots_section.dart';
+import 'package:osts_mobile_app/pages/dashboard/dashboard_header.dart';
+import 'package:osts_mobile_app/pages/dashboard/dashboard_stats_grid.dart';
+import 'package:osts_mobile_app/pages/dashboard/dashboard_bots_section.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -3370,36 +3486,12 @@ class DashboardPage extends StatelessWidget {
       ),
     ];
 
-    final activeBots = bots
-        .where((b) => b.status == 'active')
-        .toList();
-
-    final totalBalance = bots.fold<double>(
-      0,
-          (sum, b) => sum + b.currentBalance,
-    );
-
-    final totalPnL = bots.fold<double>(
-      0,
-          (sum, b) => sum + b.profitLoss,
-    );
-
-    final totalTrades = bots.fold<int>(
-      0,
-          (sum, b) => sum + b.totalTrades,
-    );
-
-    final avgWinRate = bots.isNotEmpty
-        ? bots.fold<double>(
-      0,
-          (sum, b) => sum + b.winRate,
-    ) /
-        bots.length
-        : 0.0;
-
-    final double pnlPercent = totalPnL != 0
-        ? (totalPnL / (totalBalance - totalPnL) * 100)
-        : 0.0;
+    final activeBots = bots.where((b) => b.status == 'active').toList();
+    final totalBalance = bots.fold(0.0, (sum, b) => sum + b.currentBalance);
+    final totalPnL = bots.fold(0.0, (sum, b) => sum + b.profitLoss);
+    final totalTrades = bots.fold(0, (sum, b) => sum + b.totalTrades);
+    final avgWinRate = bots.isNotEmpty ? bots.fold(0.0, (sum, b) => sum + b.winRate) / bots.length : 0.0;
+    final double pnlPercent = totalPnL != 0 ? (totalPnL / (totalBalance - totalPnL) * 100) : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -3407,15 +3499,9 @@ class DashboardPage extends StatelessWidget {
         builder: (context, constraints) {
           return Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: constraints.maxWidth,
-              ),
-              // ИСПРАВЛЕНО: Чистый скролл без скрытых паддингов ListView
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12, // Сжали отступ до минимума
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3432,13 +3518,53 @@ class DashboardPage extends StatelessWidget {
                       totalCount: bots.length,
                     ),
                     const SizedBox(height: 20),
-                    const PortfolioChart(),
-                    const SizedBox(height: 20),
-                    DashboardBotsSection(
-                      activeBots: activeBots,
+
+                    // Заголовок графика динамики портфеля
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            I18n.t(context, 'dash_chart_title'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.txt(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            I18n.t(context, 'dash_chart_sub'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.txtMuted(context),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 12),
+                    const PortfolioChart(),
+
                     const SizedBox(height: 20),
-                    const RecentTradesTable(limit: 6),
+                    DashboardBotsSection(activeBots: activeBots),
+                    const SizedBox(height: 20),
+
+                    // ИСПРАВЛЕНО: Заголовок таблицы последних сделок вынесен наружу и полностью переведен
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        I18n.t(context, 'trades_table_title'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.txt(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const RecentTradesTable(limit: 6), // Очищенная таблица
                   ],
                 ),
               ),
@@ -3458,7 +3584,8 @@ FILE: current_flutter/pages/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../app_theme.dart';
-import '../app_router.dart'; // Импорт строго на своем месте вверху файла
+import '../components/ui/osts_button.dart';
+import 'package:osts_mobile_app/config.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -3471,7 +3598,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  bool _isAuthenticated = false; // Твое оригинальное приватное поле
 
   @override
   void dispose() {
@@ -3482,88 +3609,86 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF0E1424),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppTheme.success),
-          ),
-          content: const Row(
-            children: [
-              Icon(Icons.lock_open_outlined, color: AppTheme.success, size: 20),
-              SizedBox(width: 12),
-              Text(
-                'Авторизация успешна. Вход в систему...',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      // АКТИВАЦИЯ СТРАТЕГИЧЕСКОГО МАРКЕРА:
-      isUserAuthenticated = true;
-
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (mounted) context.go('/');
+      setState(() {
+        _isAuthenticated = true; // ИСПРАВЛЕНО: строго приватное поле вместо сломанного сеттера
       });
+      context.go('/dashboard'); // Перенаправляем в терминал после успешного входа
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF080D1A),
+      backgroundColor: AppTheme.bg(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Container(
-            width: 420,
-            padding: const EdgeInsets.all(32.0),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0E1424),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.border),
-            ),
-            child: Form(
-              key: _formKey,
+          child: Form(
+            key: _formKey,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              padding: const EdgeInsets.all(32.0),
+              decoration: BoxDecoration(
+                color: AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.bd(context), width: 1),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(color: Color(0xFF14243B), shape: BoxShape.circle),
-                      child: const Icon(Icons.bolt, color: AppTheme.primary, size: 32),
+                    child: Column(
+                      children: [
+                        Icon(Icons.bolt, color: AppTheme.brand(context), size: 48),
+                        const SizedBox(height: 12),
+                        Text(
+                          AppConfig.appName,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.txt(context),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Center(
-                    child: Text('Вход в Bot Platform', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
-                  ),
-                  const SizedBox(height: 8),
-                  const Center(
-                    child: Text('Введите данные для доступа к терминалу', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-                  ),
                   const SizedBox(height: 32),
-
-                  _buildInputLabel('ЭЛЕКТРОННАЯ ПОЧТА'),
-                  _HoverLoginTextField(
+                  Text(
+                    'Email',
+                    style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
                     controller: _emailController,
-                    hintText: 'name@example.com',
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (val) => (val == null || !val.contains('@')) ? 'Введите корректный Email' : null,
+                    style: TextStyle(color: AppTheme.txt(context), fontSize: 14),
+                    decoration: _inputDecoration('name@example.com'),
+                    validator: (v) => v == null || v.isEmpty ? 'Enter email' : null,
                   ),
                   const SizedBox(height: 20),
-
-                  _buildInputLabel('ПАРОЛЬ'),
-                  _buildPasswordInput(),
+                  Text(
+                    'Password',
+                    style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: TextStyle(color: AppTheme.txt(context), fontSize: 14),
+                    decoration: _inputDecoration('••••••••'),
+                    validator: (v) => v == null || v.isEmpty ? 'Enter password' : null,
+                  ),
                   const SizedBox(height: 32),
-
-                  _LoginSubmitButton(onPressed: _handleLogin),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OstsButton(
+                      label: 'SIGN IN',
+                      onTap: _handleLogin,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -3573,65 +3698,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildInputLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(label, style: const TextStyle(color: Color(0xFF475569), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-    );
-  }
-
-  Widget _buildPasswordInput() {
-    return _HoverLoginTextField(
-      controller: _passwordController,
-      hintText: '••••••••',
-      obscureText: _obscurePassword,
-      validator: (val) => (val == null || val.length < 6) ? 'Пароль должен быть от 6 символов' : null,
-      suffixIcon: IconButton(
-        icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF475569), size: 18),
-        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-      ),
-    );
-  }
-}
-
-class _HoverLoginTextField extends StatefulWidget {
-  final TextEditingController controller; final String hintText; final bool obscureText; final TextInputType? keyboardType; final Widget? suffixIcon; final String? Function(String?)? validator;
-  const _HoverLoginTextField({required this.controller, required this.hintText, this.obscureText = false, this.keyboardType, this.suffixIcon, this.validator});
-  @override State<_HoverLoginTextField> createState() => _HoverLoginTextFieldState();
-}
-
-class _HoverLoginTextFieldState extends State<_HoverLoginTextField> {
-  bool _isHovered = false; final FocusNode _focusNode = FocusNode(); bool _isFocused = false;
-  @override void initState() { super.initState(); _focusNode.addListener(() { setState(() => _isFocused = _focusNode.hasFocus); }); }
-  @override void dispose() { _focusNode.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true), onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150), curve: Curves.easeInOut,
-        decoration: BoxDecoration(color: const Color(0xFF0A0F1D), borderRadius: BorderRadius.circular(6), border: Border.all(color: _isFocused ? AppTheme.primary : (_isHovered ? const Color(0xFF475569) : AppTheme.border), width: _isFocused ? 1.5 : 1.0)),
-        child: TextFormField(controller: widget.controller, focusNode: _focusNode, obscureText: widget.obscureText, keyboardType: widget.keyboardType, validator: widget.validator, style: const TextStyle(color: Colors.white, fontSize: 14), decoration: InputDecoration(hintText: widget.hintText, hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), suffixIcon: widget.suffixIcon, border: InputBorder.none, errorStyle: const TextStyle(height: 0, fontSize: 0))),
-      ),
-    );
-  }
-}
-
-class _LoginSubmitButton extends StatefulWidget {
-  final VoidCallback onPressed;
-  const _LoginSubmitButton({required this.onPressed});
-  @override State<_LoginSubmitButton> createState() => _LoginSubmitButtonState();
-}
-
-class _LoginSubmitButtonState extends State<_LoginSubmitButton> {
-  bool _isHovered = false;
-  @override Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true), onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150), width: double.infinity, height: 46,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), boxShadow: _isHovered ? [BoxShadow(color: AppTheme.primary.withOpacity(0.25), blurRadius: 16, spreadRadius: 1)] : null),
-        child: ElevatedButton(onPressed: widget.onPressed, style: ElevatedButton.styleFrom(backgroundColor: _isHovered ? AppTheme.primary : AppTheme.primary.withOpacity(0.85), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)), elevation: 0), child: const Text('ВОЙТИ В ТЕРМИНАЛ', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.background, letterSpacing: 0.5))),
-      ),
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: AppTheme.txtMuted(context), fontSize: 13),
+      filled: true,
+      fillColor: AppTheme.bg(context),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppTheme.bd(context))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppTheme.brand(context))),
     );
   }
 }
@@ -3938,10 +4013,11 @@ FILE: current_flutter/pages/bots/bots_filters.dart
 ================================================
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../init/i18n_manager.dart';
 
 class BotsFilters extends StatelessWidget {
   final String activeTab;
-  final ValueChanged<String> onTabChanged;
+  final ValueChanged<String> onTabChanged; // Исправлено на String без '?'
   final ValueChanged<String> onSearchChanged;
 
   const BotsFilters({
@@ -3956,18 +4032,18 @@ class BotsFilters extends StatelessWidget {
     final double width = MediaQuery.of(context).size.width;
     final bool isMobile = width < 650;
 
+    // ВОССТАНОВЛЕНО: Четвертый фильтр на остановленных ботов на месте
     final List<Map<String, String>> tabs = [
-      {'id': 'all', 'label': 'Все'},
-      {'id': 'active', 'label': 'Активные'},
-      {'id': 'paused', 'label': 'Пауза'},
+      {'id': 'all', 'label': I18n.t(context, 'bots_filter_all')},
+      {'id': 'active', 'label': I18n.t(context, 'bots_filter_active')},
+      {'id': 'paused', 'label': I18n.t(context, 'bots_filter_paused')},
+      {'id': 'stopped', 'label': I18n.t(context, 'bots_filter_stopped')},
     ];
 
     final Widget searchField = Container(
       height: 36,
       decoration: BoxDecoration(
-        color: AppTheme.isDark(context)
-            ? const Color(0xFF1E293B).withOpacity(0.3)
-            : Colors.white,
+        color: AppTheme.isDark(context) ? const Color(0xFF1E293B).withOpacity(0.3) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppTheme.bd(context)),
       ),
@@ -3975,7 +4051,7 @@ class BotsFilters extends StatelessWidget {
         onChanged: onSearchChanged,
         style: TextStyle(fontSize: 13, color: AppTheme.txt(context)),
         decoration: InputDecoration(
-          hintText: 'Поиск робота...',
+          hintText: I18n.t(context, 'bots_search_hint'),
           hintStyle: TextStyle(color: AppTheme.txtMuted(context), fontSize: 13),
           prefixIcon: Icon(Icons.search, size: 16, color: AppTheme.txtMuted(context)),
           border: InputBorder.none,
@@ -3994,13 +4070,11 @@ class BotsFilters extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             height: 32,
             child: Material(
-              color: isSel
-                  ? AppTheme.brand(context).withOpacity(0.12)
-                  : Colors.transparent,
+              color: isSel ? AppTheme.brand(context).withOpacity(0.12) : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
               child: InkWell(
                 borderRadius: BorderRadius.circular(6),
-                onTap: () => onTabChanged(t['id']!),
+                onTap: () => onTabChanged(t['id']!), // Синхронизировано по onTap
                 splashColor: AppTheme.brand(context).withOpacity(0.15),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -4051,6 +4125,7 @@ FILE: current_flutter/pages/bots/bots_list_view.dart
 import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../components/bot_card.dart';
+import '../../init/i18n_manager.dart';
 
 class BotsListView extends StatelessWidget {
   final List<Bot> bots;
@@ -4060,67 +4135,107 @@ class BotsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (bots.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Center(
-          child: Text(
-            'Роботы не найдены',
-            style: TextStyle(color: Theme.of(context).hintColor),
-          ),
-        ),
-      );
+      return const _EmptyState();
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final double availW = constraints.maxWidth;
 
-        // 1. Мобилки: Карточки вертикальной стопкой
+        // Если экран маленький — выводим простую вертикальную стопку
         if (availW < 650) {
-          return Column(
-            children: bots.map((b) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: BotCard(bot: b),
-              );
-            }).toList(),
-          );
+          return _MobileView(bots: bots);
         }
 
-        // 2. Планшеты и десктоп: Бьем массив на порции по 2 или 3 карточки в ряд
+        // Вычисляем количество колонок: 2 для планшетов, 3 для десктопа
         final int columns = availW < 1050 ? 2 : 3;
-        final List<List<Bot>> rows = [];
-
-        for (int i = 0; i < bots.length; i += columns) {
-          final int end = (i + columns < bots.length) ? i + columns : bots.length;
-          rows.add(bots.sublist(i, end));
-        }
-
-        return Column(
-          children: rows.map((rowBots) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  ...rowBots.map((b) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: BotCard(bot: b),
-                    ),
-                  )),
-                  // Добиваем пустые места в строке флекс-пустышками
-                  ...List.generate(columns - rowBots.length, (_) => const Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      child: SizedBox.shrink(),
-                    ),
-                  )),
-                ],
-              ),
-            );
-          }).toList(),
-        );
+        return _DesktopGrid(bots: bots, columns: columns);
       },
+    );
+  }
+}
+
+// 1. ИЗОЛИРОВАННЫЙ ВИДЖЕТ: Заглушка пустого списка
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Center(
+        child: Text(
+          I18n.t(context, 'bots_not_found'),
+          style: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+        ),
+      ),
+    );
+  }
+}
+
+// 2. ИЗОЛИРОВАННЫЙ ВИДЖЕТ: Мобильное отображение (в один столбец)
+class _MobileView extends StatelessWidget {
+  final List<Bot> bots;
+  const _MobileView({required this.bots});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: bots.map((b) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: BotCard(bot: b),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// 3. ИЗОЛИРОВАННЫЙ ВИДЖЕТ: Адаптивная сетка строк и колонок для больших экранов
+class _DesktopGrid extends StatelessWidget {
+  final List<Bot> bots;
+  final int columns;
+
+  const _DesktopGrid({required this.bots, required this.columns});
+
+  // Вспомогательный метод нарезки массива ботов на строки
+  List<List<Bot>> _splitIntoRows() {
+    final List<List<Bot>> rows = [];
+    for (int i = 0; i < bots.length; i += columns) {
+      final int end = (i + columns < bots.length) ? i + columns : bots.length;
+      rows.add(bots.sublist(i, end));
+    }
+    return rows;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _splitIntoRows();
+
+    return Column(
+      children: rows.map((rowBots) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              // Рендерим карточки ботов в текущей строке
+              ...rowBots.map((b) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: BotCard(bot: b),
+                ),
+              )),
+              // Добиваем пустые места в ряду невидимыми пустышками, если элементов меньше, чем колонок
+              ...List.generate(columns - rowBots.length, (_) => const Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: SizedBox.shrink(),
+                ),
+              )),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -4132,13 +4247,16 @@ FILE: current_flutter/pages/bots/create_bot_dialog.dart
 ================================================
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../init/i18n_manager.dart';
+import 'create_dialog/dialog_header.dart';
+import 'create_dialog/dialog_inputs.dart';
+import 'create_dialog/dialog_actions.dart';
 
 class CreateBotDialog extends StatefulWidget {
   const CreateBotDialog({super.key});
 
   @override
-  State<CreateBotDialog> createState() =>
-      _CreateBotDialogState();
+  State<CreateBotDialog> createState() => _CreateBotDialogState();
 }
 
 class _CreateBotDialogState extends State<CreateBotDialog> {
@@ -4151,17 +4269,11 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-
     return Dialog(
       backgroundColor: AppTheme.surface(context),
-      // ИСПРАВЛЕНО: Канонический класс скругления диалога
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: width < 500 ? width * 0.9 : 460,
-        ),
+        constraints: BoxConstraints(maxWidth: width < 500 ? width * 0.9 : 460),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Form(
@@ -4171,24 +4283,41 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(context),
+                  const DialogHeaderBlock(),
                   const SizedBox(height: 16),
-                  _buildLabel(context, 'Имя робота'),
-                  _buildNameInput(),
-                  const SizedBox(height: 12),
-                  _buildLabel(context, 'Биржа'),
-                  _buildExchangeDropdown(),
-                  const SizedBox(height: 12),
-                  _buildLabel(context, 'Торговая пара'),
-                  _buildPairInput(),
-                  const SizedBox(height: 12),
-                  _buildLabel(
-                    context,
-                    'Стартовый капитал (\$${_capital.toStringAsFixed(0)})',
+                  DialogLabel(text: I18n.t(context, 'create_bot_modal_name_label')),
+                  TextFormField(
+                    style: TextStyle(fontSize: 14, color: AppTheme.txt(context)),
+                    decoration: inputDecoration(context, I18n.t(context, 'create_bot_modal_name_hint')),
+                    validator: (v) => v == null || v.isEmpty ? I18n.t(context, 'create_bot_modal_name_error') : null,
+                    onChanged: (v) => _name = v,
                   ),
-                  _buildCapitalSlider(),
+                  const SizedBox(height: 12),
+                  DialogLabel(text: I18n.t(context, 'create_bot_modal_exchange_label')),
+                  DropdownButtonFormField<String>(
+                    value: _exchange,
+                    dropdownColor: AppTheme.surface(context),
+                    style: TextStyle(fontSize: 14, color: AppTheme.txt(context)),
+                    decoration: inputDecoration(context, ''),
+                    items: ['binance', 'bybit', 'okx'].map((e) => DropdownMenuItem(value: e, child: Text(e.toUpperCase()))).toList(),
+                    onChanged: (v) => setState(() => _exchange = v ?? 'binance'),
+                  ),
+                  const SizedBox(height: 12),
+                  DialogLabel(text: I18n.t(context, 'create_bot_modal_pair_label')),
+                  TextFormField(
+                    initialValue: _pair,
+                    style: TextStyle(fontSize: 14, color: AppTheme.txt(context)),
+                    decoration: inputDecoration(context, 'BTC/USDT'),
+                    onChanged: (v) => _pair = v,
+                  ),
+                  const SizedBox(height: 12),
+                  DialogLabel(text: '${I18n.t(context, 'create_bot_modal_capital_label')} (\$${_capital.toStringAsFixed(0)})'),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(activeTrackColor: AppTheme.brand(context), thumbColor: AppTheme.brand(context)),
+                    child: Slider(value: _capital, min: 100, max: 50000, divisions: 100, onChanged: (v) => setState(() => _capital = v)),
+                  ),
                   const SizedBox(height: 20),
-                  _buildActions(context),
+                  DialogActionsBlock(formKey: _formKey, getName: () => _name),
                 ],
               ),
             ),
@@ -4197,13 +4326,77 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
       ),
     );
   }
+}
 
-  Widget _buildHeader(BuildContext context) {
+
+
+================================================
+FILE: current_flutter/pages/bots/create_dialog/dialog_actions.dart
+================================================
+import 'package:flutter/material.dart';
+import '../../../../app_theme.dart';
+import '../../../../init/i18n_manager.dart';
+import '../../../../components/ui/osts_button.dart'; // Подключаем кастомную кнопку терминала
+
+class DialogActionsBlock extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final String Function() getName;
+
+  const DialogActionsBlock({
+    super.key,
+    required this.formKey,
+    required this.getName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            I18n.t(context, 'create_bot_modal_cancel'),
+            style: TextStyle(color: AppTheme.txtMuted(context)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        OstsButton(
+          label: I18n.t(context, 'create_bot_modal_launch'),
+          onTap: () {
+            if (formKey.currentState!.validate()) {
+              Navigator.pop(context);
+              final successMsg = I18n.t(context, 'create_bot_modal_success_toast').replaceAll('{name}', getName());
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(successMsg)),
+              );
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+
+
+================================================
+FILE: current_flutter/pages/bots/create_dialog/dialog_header.dart
+================================================
+import 'package:flutter/material.dart';
+import '../../../../app_theme.dart';
+import '../../../../init/i18n_manager.dart';
+
+class DialogHeaderBlock extends StatelessWidget {
+  const DialogHeaderBlock({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Создание робота',
+          I18n.t(context, 'create_bot_modal_title'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -4219,139 +4412,38 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
       ],
     );
   }
+}
 
-  Widget _buildLabel(BuildContext context, String text) {
+
+
+================================================
+FILE: current_flutter/pages/bots/create_dialog/dialog_inputs.dart
+================================================
+import 'package:flutter/material.dart';
+import '../../../../app_theme.dart';
+import '../../../../init/i18n_manager.dart';
+
+InputDecoration inputDecoration(BuildContext context, String hint) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: TextStyle(color: AppTheme.txtMuted(context), fontSize: 13),
+    filled: true,
+    fillColor: AppTheme.isDark(context) ? const Color(0xFF1E293B).withOpacity(0.3) : Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppTheme.bd(context))),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppTheme.brand(context))),
+  );
+}
+
+class DialogLabel extends StatelessWidget {
+  final String text;
+  const DialogLabel({super.key, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: AppTheme.txtMuted(context),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNameInput() {
-    return TextFormField(
-      style: TextStyle(fontSize: 14, color: AppTheme.txt(context)),
-      decoration: _inputDecoration('Например, BTC Scalper'),
-      validator: (v) => v == null || v.isEmpty ? 'Введите имя' : null,
-      onChanged: (v) => _name = v,
-    );
-  }
-
-  Widget _buildExchangeDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _exchange,
-      dropdownColor: AppTheme.surface(context),
-      style: TextStyle(fontSize: 14, color: AppTheme.txt(context)),
-      decoration: _inputDecoration(''),
-      items: ['binance', 'bybit', 'okx']
-          .map((e) => DropdownMenuItem(
-        value: e,
-        child: Text(e.toUpperCase()),
-      ))
-          .toList(),
-      onChanged: (v) => setState(() => _exchange = v ?? 'binance'),
-    );
-  }
-
-  Widget _buildPairInput() {
-    return TextFormField(
-      initialValue: _pair,
-      style: TextStyle(fontSize: 14, color: AppTheme.txt(context)),
-      decoration: _inputDecoration('BTC/USDT'),
-      onChanged: (v) => _pair = v,
-    );
-  }
-
-  Widget _buildCapitalSlider() {
-    return SliderTheme(
-      data: SliderTheme.of(context).copyWith(
-        activeTrackColor: AppTheme.brand(context),
-        thumbColor: AppTheme.brand(context),
-      ),
-      child: Slider(
-        value: _capital,
-        min: 100,
-        max: 50000,
-        divisions: 100,
-        onChanged: (v) => setState(() => _capital = v),
-      ),
-    );
-  }
-
-  Widget _buildActions(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Отмена',
-            style: TextStyle(color: AppTheme.txtMuted(context)),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Material(
-          color: AppTheme.brand(context),
-          borderRadius: BorderRadius.circular(6),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(6),
-            onTap: () {
-              if (_formKey.currentState!.validate()) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Робот $_name создан')),
-                );
-              }
-            },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              child: Text(
-                'Запустить',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(
-        color: AppTheme.txtMuted(context),
-        fontSize: 13,
-      ),
-      filled: true,
-      fillColor: AppTheme.isDark(context)
-          ? const Color(0xFF1E293B).withOpacity(0.3)
-          : Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppTheme.bd(context)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppTheme.brand(context)),
-      ),
+      child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.txtMuted(context))),
     );
   }
 }
@@ -4362,9 +4454,11 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
 FILE: current_flutter/pages/dashboard/dashboard_bots_section.dart
 ================================================
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/components/bot_card.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardBotsSection extends StatelessWidget {
   final List<Bot> activeBots;
@@ -4379,7 +4473,6 @@ class DashboardBotsSection extends StatelessWidget {
     if (activeBots.isEmpty) {
       return const SizedBox.shrink();
     }
-
     final displayBots = activeBots.take(3).toList();
 
     return Column(
@@ -4391,7 +4484,7 @@ class DashboardBotsSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Активные боты',
+                I18n.t(context, 'dash_active_section'), // ПЕРЕВЕДЕНО
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -4399,7 +4492,7 @@ class DashboardBotsSection extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => context.go('/bots'), // Фикс навигации
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -4407,7 +4500,7 @@ class DashboardBotsSection extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      'Все боты ',
+                      I18n.t(context, 'dash_all_bots_link'), // ПЕРЕВЕДЕНО
                       style: TextStyle(
                         color: AppTheme.brand(context),
                         fontSize: 13,
@@ -4429,7 +4522,6 @@ class DashboardBotsSection extends StatelessWidget {
           builder: (context, constraints) {
             final double availW = constraints.maxWidth;
 
-            // Смартфоны: Карточки стопкой в Column
             if (availW < 650) {
               return Column(
                 children: displayBots.map((bot) {
@@ -4441,7 +4533,6 @@ class DashboardBotsSection extends StatelessWidget {
               );
             }
 
-            // Планшеты: 2 карточки в ряд, 3-я снизу
             if (availW < 1000) {
               return Column(
                 children: [
@@ -4468,21 +4559,16 @@ class DashboardBotsSection extends StatelessWidget {
               );
             }
 
-            // Десктоп: ИСПРАВЛЕНО - Строка из Expanded намертво убирает оверфлоу
             return Row(
               children: [
                 Expanded(child: BotCard(bot: displayBots[0])),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: displayBots.length > 1
-                      ? BotCard(bot: displayBots[1])
-                      : const SizedBox.shrink(),
+                  child: displayBots.length > 1 ? BotCard(bot: displayBots[1]) : const SizedBox.shrink(),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: displayBots.length > 2
-                      ? BotCard(bot: displayBots[2])
-                      : const SizedBox.shrink(),
+                  child: displayBots.length > 2 ? BotCard(bot: displayBots[2]) : const SizedBox.shrink(),
                 ),
               ],
             );
@@ -4500,6 +4586,7 @@ FILE: current_flutter/pages/dashboard/dashboard_header.dart
 ================================================
 import 'package:flutter/material.dart';
 import 'package:osts_mobile_app/app_theme.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardHeader extends StatelessWidget {
   const DashboardHeader({super.key});
@@ -4507,19 +4594,15 @@ class DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
-
     return Padding(
-      // ИСПРАВЛЕНО: Все отступы урезаны ровно в 2 раза
       padding: const EdgeInsets.only(
-        left: 2,
-        top: 2,
-        bottom: 0,
+        left: 2, top: 2, bottom: 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Добро пожаловать',
+            I18n.t(context, 'dash_welcome'), // ПЕРЕВЕДЕНО
             style: TextStyle(
               fontSize: width < 600 ? 22 : 24,
               fontWeight: FontWeight.bold,
@@ -4529,7 +4612,7 @@ class DashboardHeader extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Обзор вашего торгового портфеля',
+            I18n.t(context, 'dash_overview'), // ПЕРЕВЕДЕНО
             style: TextStyle(
               fontSize: 13,
               color: AppTheme.txtMuted(context),
@@ -4549,6 +4632,7 @@ FILE: current_flutter/pages/dashboard/dashboard_stats_grid.dart
 import 'package:flutter/material.dart';
 import 'package:osts_mobile_app/models/models.dart';
 import 'package:osts_mobile_app/components/stat_card.dart';
+import 'package:osts_mobile_app/init/i18n_manager.dart';
 
 class DashboardStatsGrid extends StatelessWidget {
   final double totalBalance;
@@ -4576,99 +4660,52 @@ class DashboardStatsGrid extends StatelessWidget {
       builder: (context, constraints) {
         final double availW = constraints.maxWidth;
 
-        // Мобильный режим: 2 строки по 2 карточки
-        if (availW < 800) {
-          return Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Общий баланс',
-                      value: '\$${totalBalance.toLocale()}',
-                      change: pnlPercent,
-                      icon: Icons.account_balance_wallet,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Активные боты',
-                      value: '$activeCount / $totalCount',
-                      icon: Icons.smart_toy,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Общий PnL',
-                      value: '${totalPnL >= 0 ? "+" : ""}'
-                          '\$${totalPnL.toStringAsFixed(2)}',
-                      variant: totalPnL >= 0
-                          ? StatCardVariant.success
-                          : StatCardVariant.danger,
-                      icon: Icons.trending_up,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Всего сделок',
-                      value: totalTrades.toLocale(),
-                      changeLabel: 'Win Rate: '
-                          '${avgWinRate.toStringAsFixed(1)}%',
-                      icon: Icons.analytics,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
+        // Рассчитываем адаптивную ширину карточек по нашей безопасной формуле
+        int columns = 1;
+        if (availW >= 1024) {
+          columns = 4;
+        } else if (availW >= 600) {
+          columns = 2;
         }
 
-        // Десктопный режим: Все 4 карточки строго в один ряд
-        // ИСПРАВЛЕНО: Чистый Row + Expanded уничтожает shrinkWrap баг
-        return Row(
+        final double itemWidth = (availW - (columns - 1) * 12) / columns;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Общий баланс',
+                title: I18n.t(context, 'dash_total_balance'),
                 value: '\$${totalBalance.toLocale()}',
                 change: pnlPercent,
                 icon: Icons.account_balance_wallet,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Активные боты',
+                title: I18n.t(context, 'dash_active_bots'),
                 value: '$activeCount / $totalCount',
                 icon: Icons.smart_toy,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Общий PnL',
-                value: '${totalPnL >= 0 ? "+" : ""}'
-                    '\$${totalPnL.toStringAsFixed(2)}',
-                variant: totalPnL >= 0
-                    ? StatCardVariant.success
-                    : StatCardVariant.danger,
+                title: I18n.t(context, 'dash_total_pnl'),
+                value: '${totalPnL >= 0 ? "+" : ""}\$${totalPnL.toStringAsFixed(2)}',
+                variant: totalPnL >= 0 ? StatCardVariant.success : StatCardVariant.danger,
                 icon: Icons.trending_up,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: itemWidth,
               child: StatCard(
-                title: 'Всего сделок',
+                title: I18n.t(context, 'dash_total_trades'),
                 value: totalTrades.toLocale(),
-                changeLabel: 'Win Rate: '
-                    '${avgWinRate.toStringAsFixed(1)}%',
+                changeLabel: 'Win Rate: ${avgWinRate.toStringAsFixed(1)}%',
                 icon: Icons.analytics,
               ),
             ),
