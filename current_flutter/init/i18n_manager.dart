@@ -22,6 +22,19 @@ class I18n extends InheritedNotifier<I18nNotifier> {
 
   static const Map<AppLanguage, Map<String, String>> _localizedValues = {
     AppLanguage.ru: {
+      // Экран Системных Логов / Уведомлений
+      'notifications_screen_title': 'Системные логи',
+      'notifications_screen_dialog_title': 'Детали системного события',
+      'notifications_screen_source': 'Источник',
+      'notifications_screen_dialog_close': 'Закрыть',
+
+      // Шаблоны уведомлений (Динамические плейсхолдеры)
+      // Шаблоны уведомлений (Динамические плейсхолдеры)
+      'notif_msg_trade_buy': 'Исполнен лимитный ордер BUY #{id} на объем {amount} {pair} @ \${price}', // Экранирован знак доллара
+      'notif_msg_error_api': 'API Error: {error}. Запрос отклонен биржей.',
+      'notif_msg_warning_volatility': 'Внимание: Высокая волатильность на рынке. Сетка ордеров расширена на {percent}%.',
+      'notif_msg_info_service': 'Микросервис {service} успешно перезапущен. Синхронизация БД завершена.',
+
       // Сайдбар и Навигация
       'nav_overview': 'Обзор',
       'nav_bots': 'Боты',
@@ -84,8 +97,45 @@ class I18n extends InheritedNotifier<I18nNotifier> {
       'trades_toast_details': 'Детали сделки {id} скоро будут доступны',
       'lang_ru': 'Русский',
       'lang_en': 'English',
+
+      // Для секции AppLanguage.ru:
+      'analytics_screen_title': 'Аналитика',
+      'analytics_screen_subtitle': 'Детальный анализ портфеля и торговой активности',
+      'analytics_total_balance': 'Общий баланс',
+      'analytics_total_pnl': 'Общий PnL',
+      'analytics_total_trades': 'Всего сделок',
+      'analytics_avg_winrate': 'Средний Win Rate',
+      'analytics_trading_volume': 'Объём торгов',
+      'analytics_active_bots': 'Активных ботов',
+      'analytics_bots_profitability': 'Прибыльность ботов',
+      'analytics_bots_pnl_desc': 'PnL каждого бота в долларах',
+      'analytics_daily_pnl': 'Ежедневный PnL',
+      'analytics_balance_dist': 'Распределение баланса',
+      'analytics_by_exchanges': 'По биржам',
+      'analytics_by_strategies': 'По стратегиям',
+      'analytics_table_title': 'Сравнение ботов',
+      'analytics_th_bot': 'Бот',
+      'analytics_th_balance': 'Баланс',
+      'analytics_th_pnl': 'PnL',
+      'analytics_th_pnl_pct': 'PnL %',
+      'analytics_th_winrate': 'Win Rate',
+      'analytics_th_drawdown': 'Просадка',
+      'analytics_th_trades': 'Сделки',
     },
     AppLanguage.en: {
+      // System Logs / Notifications Screen
+      'notifications_screen_title': 'System Logs',
+      'notifications_screen_dialog_title': 'System Event Details',
+      'notifications_screen_source': 'Source',
+      'notifications_screen_dialog_close': 'Close',
+
+      // Notification Templates (Dynamic placeholders)
+      // Notification Templates (Dynamic placeholders)
+      'notif_msg_trade_buy': 'Limit order BUY #{id} executed for {amount} {pair} @ \${price}', // Экранирован знак доллара
+      'notif_msg_error_api': 'API Error: {error}. Request rejected by exchange.',
+      'notif_msg_warning_volatility': 'Warning: High market volatility. Grid expanded by {percent}%.',
+      'notif_msg_info_service': 'Microservice {service} successfully restarted. DB sync completed.',
+
       // Sidebar & Navigation
       'nav_overview': 'Overview',
       'nav_bots': 'Bots',
@@ -148,12 +198,36 @@ class I18n extends InheritedNotifier<I18nNotifier> {
       'trades_toast_details': 'Trade details for {id} will be available soon',
       'lang_ru': 'Russian',
       'lang_en': 'English',
+
+      // Для секции AppLanguage.en:
+      'analytics_screen_title': 'Analytics',
+      'analytics_screen_subtitle': 'Detailed analysis of portfolio and trading activity',
+      'analytics_total_balance': 'Total Balance',
+      'analytics_total_pnl': 'Total PnL',
+      'analytics_total_trades': 'Total Trades',
+      'analytics_avg_winrate': 'Average Win Rate',
+      'analytics_trading_volume': 'Trading Volume',
+      'analytics_active_bots': 'Active Bots',
+      'analytics_bots_profitability': 'Bots Profitability',
+      'analytics_bots_pnl_desc': 'PnL of each bot in dollars',
+      'analytics_daily_pnl': 'Daily PnL',
+      'analytics_balance_dist': 'Balance Distribution',
+      'analytics_by_exchanges': 'By Exchanges',
+      'analytics_by_strategies': 'By Strategies',
+      'analytics_table_title': 'Bots Comparison',
+      'analytics_th_bot': 'Bot',
+      'analytics_th_balance': 'Balance',
+      'analytics_th_pnl': 'PnL',
+      'analytics_th_pnl_pct': 'PnL %',
+      'analytics_th_winrate': 'Win Rate',
+      'analytics_th_drawdown': 'Drawdown',
+      'analytics_th_trades': 'Trades',
     }
   };
 }
 
 class I18nNotifier extends ChangeNotifier {
-  AppLanguage _currentLang = AppLanguage.ru;
+  AppLanguage _currentLang = AppLanguage.en;
 
   AppLanguage get currentLanguage => _currentLang;
 

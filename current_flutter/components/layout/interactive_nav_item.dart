@@ -8,6 +8,7 @@ class InteractiveNavItem extends StatefulWidget {
   final String path;
   final String currentPath;
   final bool isCollapsed;
+  final VoidCallback onTap; // ДОБАВЛЕНО: Передаем клик на уровень лейаута
 
   const InteractiveNavItem({
     super.key,
@@ -16,6 +17,7 @@ class InteractiveNavItem extends StatefulWidget {
     required this.path,
     required this.currentPath,
     required this.isCollapsed,
+    required this.onTap, // ДОБАВЛЕНО
   });
 
   @override
@@ -63,7 +65,7 @@ class _InteractiveNavItemState
             AppTheme.brand(context).withOpacity(0.2),
             highlightColor:
             AppTheme.brand(context).withOpacity(0.08),
-            onTap: () => context.go(widget.path),
+            onTap: widget.onTap,
             child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 12,

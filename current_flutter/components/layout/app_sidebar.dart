@@ -70,65 +70,49 @@ class _AppSidebarState extends State<AppSidebar> {
               child: ListView(
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  // Клики строго дергают onItemTapped, а пути передаются только для сверки активности внутри InteractiveNavItem
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => widget.onItemTapped(0),
-                    child: InteractiveNavItem(
-                      icon: Icons.dashboard_outlined,
-                      label: I18n.t(context, 'nav_overview'),
-                      path: '/dashboard',
-                      currentPath: currentPath,
-                      isCollapsed: _isSidebarCollapsed,
-                    ),
+                  InteractiveNavItem(
+                    icon: Icons.dashboard_outlined,
+                    label: I18n.t(context, 'nav_overview'),
+                    path: '/dashboard',
+                    currentPath: currentPath,
+                    isCollapsed: _isSidebarCollapsed,
+                    onTap: () => widget.onItemTapped(0), // ИСПРАВЛЕНО: Передаем напрямую по правилам архитектуры
                   ),
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  InteractiveNavItem(
+                    icon: Icons.smart_toy_outlined,
+                    label: I18n.t(context, 'nav_bots'),
+                    path: '/bots',
+                    currentPath: currentPath,
+                    isCollapsed: _isSidebarCollapsed,
                     onTap: () => widget.onItemTapped(1),
-                    child: InteractiveNavItem(
-                      icon: Icons.smart_toy_outlined,
-                      label: I18n.t(context, 'nav_bots'),
-                      path: '/bots',
-                      currentPath: currentPath,
-                      isCollapsed: _isSidebarCollapsed,
-                    ),
                   ),
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  InteractiveNavItem(
+                    icon: Icons.analytics_outlined,
+                    label: I18n.t(context, 'nav_analytics'),
+                    path: '/analytics',
+                    currentPath: currentPath,
+                    isCollapsed: _isSidebarCollapsed,
                     onTap: () => widget.onItemTapped(2),
-                    child: InteractiveNavItem(
-                      icon: Icons.analytics_outlined,
-                      label: I18n.t(context, 'nav_analytics'),
-                      path: '/analytics',
-                      currentPath: currentPath,
-                      isCollapsed: _isSidebarCollapsed,
-                    ),
                   ),
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  InteractiveNavItem(
+                    icon: Icons.vpn_key_outlined,
+                    label: I18n.t(context, 'nav_api_keys'),
+                    path: '/api-keys',
+                    currentPath: currentPath,
+                    isCollapsed: _isSidebarCollapsed,
                     onTap: () => widget.onItemTapped(3),
-                    child: InteractiveNavItem(
-                      icon: Icons.vpn_key_outlined,
-                      label: I18n.t(context, 'nav_api_keys'),
-                      path: '/api-keys',
-                      currentPath: currentPath,
-                      isCollapsed: _isSidebarCollapsed,
-                    ),
                   ),
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  InteractiveNavItem(
+                    icon: Icons.settings_outlined,
+                    label: I18n.t(context, 'nav_settings'),
+                    path: '/settings',
+                    currentPath: currentPath,
+                    isCollapsed: _isSidebarCollapsed,
                     onTap: () => widget.onItemTapped(4),
-                    child: InteractiveNavItem(
-                      icon: Icons.settings_outlined,
-                      label: I18n.t(context, 'nav_settings'),
-                      path: '/settings',
-                      currentPath: currentPath,
-                      isCollapsed: _isSidebarCollapsed,
-                    ),
                   ),
                 ],
               ),
@@ -138,17 +122,20 @@ class _AppSidebarState extends State<AppSidebar> {
             padding: const EdgeInsets.all(12.0),
             child: Column(
               children: [
-                FooterActionButton(
-                  icon: _isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left,
-                  label: I18n.t(context, 'nav_collapse'),
-                  isCollapsed: _isSidebarCollapsed,
-                  onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
-                ),
-                const SizedBox(height: 6),
+                // Скрываем кнопку сворачивания для мобильных экранов
+                if (MediaQuery.of(context).size.width >= 900) ...[
+                  FooterActionButton(
+                    icon: _isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left,
+                    label: I18n.t(context, 'nav_collapse'),
+                    isCollapsed: _isSidebarCollapsed,
+                    onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 FooterActionButton(
                   icon: Icons.logout,
                   label: I18n.t(context, 'nav_logout'),
-                  isCollapsed: _isSidebarCollapsed,
+                  isCollapsed: MediaQuery.of(context).size.width < 900 ? false : _isSidebarCollapsed, // На мобилке всегда развернут текст
                   onTap: () => context.go('/login'),
                 ),
               ],
