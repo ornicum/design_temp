@@ -4,7 +4,6 @@ import 'package:osts_mobile_app/app_theme.dart';
 import 'package:osts_mobile_app/init/i18n_manager.dart';
 import 'package:osts_mobile_app/components/layout/interactive_nav_item.dart';
 import 'package:osts_mobile_app/components/layout/footer_action_button.dart';
-import 'package:osts_mobile_app/config.dart';
 
 class AppSidebar extends StatefulWidget {
   final int currentIndex;
@@ -52,7 +51,7 @@ class _AppSidebarState extends State<AppSidebar> {
                 if (!_isSidebarCollapsed) ...[
                   const SizedBox(width: 10),
                   Text(
-                    AppConfig.appName,
+                    'OSTS TERMINAL',
                     style: TextStyle(
                       color: AppTheme.txt(context),
                       fontWeight: FontWeight.w900,
