@@ -107,12 +107,12 @@ class AppTopBar extends StatelessWidget {
       onSelected: (AppLanguage language) => i18nNotifier.setLanguage(language),
       itemBuilder: (BuildContext context) => <PopupMenuEntry<AppLanguage>>[
         PopupMenuItem<AppLanguage>(
-          value: AppLanguage.ru,
-          child: _buildLanguageItem(context, '🇷🇺 ', 'Русский', currentLang == AppLanguage.ru),
-        ),
-        PopupMenuItem<AppLanguage>(
           value: AppLanguage.en,
           child: _buildLanguageItem(context, '🇺🇸 ', 'English', currentLang == AppLanguage.en),
+        ),
+        PopupMenuItem<AppLanguage>(
+          value: AppLanguage.ru,
+          child: _buildLanguageItem(context, '🇷🇺 ', 'Русский', currentLang == AppLanguage.ru),
         ),
       ],
     );

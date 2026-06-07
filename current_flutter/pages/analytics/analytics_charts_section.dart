@@ -16,14 +16,103 @@ class AnalyticsChartsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isMobile = width < 900;
-
     return Column(
       children: [
         _buildCard(
-          context, title: I18n.t(context, 'analytics_bots_profitability'), sub: I18n.t(context, 'analytics_bots_pnl_desc'),
+          context,
+          title: I18n.t(context, 'analytics_bots_profitability'),
+          sub: I18n.t(context, 'analytics_bots_pnl_desc'),
           child: BarChart(BarChartData(
-              alignment: BarChartAlignment.spaceAround, maxY: 3000, minY: -500, borderData: FlBorderData(show: false), titlesData: const FlTitlesData(show: false),
-              barGroups: List.generate(state.botPnL.length, (i) => BarChartGroupData(x: state.botPnL[i].x, barRods: [BarChartRodData(toY: state.botPnL[i].y, color: state.botPnL[i].y >= 0 ? AppTheme.success : AppTheme.destructive, width: 20)]))
+            alignment: BarChartAlignment.spaceAround,
+            maxY: 3000,
+            minY: -500,
+            // 1. Сетка: Включаем только горизонтальные линии (как в CartesianGrid vertical={false})
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 1000,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: AppTheme.bd(context).withOpacity(0.4),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            // 2. Оси: Включаем детальные финтех-подписи осей X и Y из оригинала
+            titlesData: FlTitlesData(
+              show: true,
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              // Ось Y: Форматирование вывода валюты ($1.5k, $0)
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 45, // Немного увеличим отступ для красивого выравнивания
+                  getTitlesWidget: (value, meta) {
+                    if (value == 0) {
+                      return Text('\$0', style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 10));
+                    }
+
+                    final String sign = value < 0 ? '-' : '';
+                    final double absoluteValue = value.abs();
+                    String formatted;
+
+                    if (absoluteValue >= 1000) {
+                      final double thousands = absoluteValue / 1000;
+                      formatted = '${thousands.toStringAsFixed(1)}k';
+                    } else {
+                      formatted = '${absoluteValue.toInt()}';
+                    }
+
+                    return Text(
+                      '$sign\$$formatted',
+                      style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+              // Ось X: Поворот длинных названий роботов под углом -35 градусов для защиты от наложения
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 45,
+                  getTitlesWidget: (value, meta) {
+                    int idx = value.toInt();
+                    if (idx >= 0 && idx < state.botPnL.length) {
+                      String name = state.botPnL[idx].label;
+                      if (name.length > 14) name = '${name.substring(0, 13)}…';
+                      return SideTitleWidget(
+                        meta: meta, // Обязательный именованный параметр в данной версии fl_chart
+                        angle: -0.61, // ~ -35 градусов в радианах
+                        space: 12,
+                        child: Text(
+                          name,
+                          style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 9, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+            // 3. Столбцы: Радиусы скругления углов и динамический цвет PnL
+            barGroups: List.generate(state.botPnL.length, (i) {
+              final double yVal = state.botPnL[i].y;
+              return BarChartGroupData(
+                x: state.botPnL[i].x,
+                barRods: [
+                  BarChartRodData(
+                    toY: yVal,
+                    color: yVal >= 0 ? AppTheme.success : AppTheme.destructive,
+                    width: isMobile ? 14 : 20,
+                    borderRadius: yVal >= 0
+                        ? const BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4))
+                        : const BorderRadius.only(bottomLeft: Radius.circular(4), bottomRight: Radius.circular(4)),
+                  ),
+                ],
+              );
+            }),
           )),
         ),
         const SizedBox(height: 20),

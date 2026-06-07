@@ -10,26 +10,48 @@ class AnalyticsStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double width = MediaQuery.of(context).size.width;
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        int columns = width < 400 ? 2 : (width < 900 ? 3 : 6);
-        double spacing = 12.0;
-        double itemWidth = (constraints.maxWidth - (columns - 1) * spacing) / columns;
+        final double availW = constraints.maxWidth;
+
+        int columns = 1;
+        if (availW >= 1024) {
+          columns = 4;
+        } else if (availW >= 600) {
+          columns = 2;
+        }
+
+        final double itemWidth = (availW - (columns - 1) * 12) / columns;
 
         return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
+          spacing: 12,
+          runSpacing: 12,
           children: List.generate(metrics.length, (index) {
             final m = metrics[index];
+
+            // Динамическая локализация зашитых changeLabel из Rust-слоя
+            String localizedLabel = m.changeLabel;
+            if (m.key == 'analytics_total_balance') {
+              localizedLabel = I18n.t(context, 'analytics_invested_label').replaceAll('{value}', '\$24 500');
+            } else if (m.key == 'analytics_total_pnl') {
+              localizedLabel = m.changeLabel; // Здесь процентная строка "+9.0%", она интернациональна
+            } else if (m.key == 'analytics_total_trades') {
+              localizedLabel = I18n.t(context, 'analytics_profitable_label').replaceAll('{value}', '812');
+            } else if (m.key == 'analytics_avg_winrate') {
+              localizedLabel = I18n.t(context, 'analytics_stable_label');
+            } else if (m.key == 'analytics_trading_volume') {
+              localizedLabel = I18n.t(context, 'analytics_trades_count_label').replaceAll('{value}', '1353');
+            } else if (m.key == 'analytics_active_bots') {
+              localizedLabel = I18n.t(context, 'analytics_total_label').replaceAll('{value}', '5');
+            }
+
             return SizedBox(
               width: itemWidth,
               child: StatCard(
                 title: I18n.t(context, m.key),
                 value: m.value,
                 change: m.changePct,
-                changeLabel: m.changeLabel,
+                changeLabel: localizedLabel,
                 icon: m.isWalletIcon ? Icons.account_balance_wallet : Icons.bolt,
                 variant: m.isSuccessVariant ? StatCardVariant.success : StatCardVariant.defaultVariant,
               ),

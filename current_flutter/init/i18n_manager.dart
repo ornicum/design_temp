@@ -29,7 +29,6 @@ class I18n extends InheritedNotifier<I18nNotifier> {
       'notifications_screen_dialog_close': 'Закрыть',
 
       // Шаблоны уведомлений (Динамические плейсхолдеры)
-      // Шаблоны уведомлений (Динамические плейсхолдеры)
       'notif_msg_trade_buy': 'Исполнен лимитный ордер BUY #{id} на объем {amount} {pair} @ \${price}', // Экранирован знак доллара
       'notif_msg_error_api': 'API Error: {error}. Запрос отклонен биржей.',
       'notif_msg_warning_volatility': 'Внимание: Высокая волатильность на рынке. Сетка ордеров расширена на {percent}%.',
@@ -107,6 +106,11 @@ class I18n extends InheritedNotifier<I18nNotifier> {
       'analytics_avg_winrate': 'Средний Win Rate',
       'analytics_trading_volume': 'Объём торгов',
       'analytics_active_bots': 'Активных ботов',
+      'analytics_invested_label': 'Вложено: {value}',
+      'analytics_profitable_label': 'Прибыльных: {value}',
+      'analytics_stable_label': 'Стабильно',
+      'analytics_trades_count_label': '{value} сделки',
+      'analytics_total_label': 'Всего: {value}',
       'analytics_bots_profitability': 'Прибыльность ботов',
       'analytics_bots_pnl_desc': 'PnL каждого бота в долларах',
       'analytics_daily_pnl': 'Ежедневный PnL',
@@ -208,6 +212,11 @@ class I18n extends InheritedNotifier<I18nNotifier> {
       'analytics_avg_winrate': 'Average Win Rate',
       'analytics_trading_volume': 'Trading Volume',
       'analytics_active_bots': 'Active Bots',
+      'analytics_invested_label': 'Invested: {value}',
+      'analytics_profitable_label': 'Profitable: {value}',
+      'analytics_stable_label': 'Stable',
+      'analytics_trades_count_label': '{value} trades',
+      'analytics_total_label': 'Total: {value}',
       'analytics_bots_profitability': 'Bots Profitability',
       'analytics_bots_pnl_desc': 'PnL of each bot in dollars',
       'analytics_daily_pnl': 'Daily PnL',
