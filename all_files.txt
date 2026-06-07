@@ -13,14 +13,6 @@ FILE: README.md
 ================================================
 # design_temp
 
-
-
-================================================
-FILE: msg_from_previous_session.txt
-================================================
-[Binary file]
-
-
 ================================================
 FILE: rules.txt
 ================================================
@@ -7605,7 +7597,195 @@ export default function ApiKeys() {
 ================================================
 FILE: original/pages/BotDetail.jsx
 ================================================
-[Binary file]
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useState } from "react";
+import { ArrowLeft, Play, Pause, Square, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import BotStatusBadge from "../components/BotStatusBadge";
+import RecentTradesTable from "../components/RecentTradesTable";
+import CreateBotDialog from "../components/CreateBotDialog";
+import BotPerformanceChart from "../components/BotPerformanceChart";
+
+const strategyLabels = {
+  grid: "Grid Trading", dca: "DCA", scalping: "Scalping",
+  arbitrage: "Арбитраж", momentum: "Momentum", mean_reversion: "Mean Reversion",
+};
+const riskLabels = { low: "Низкий", medium: "Средний", high: "Высокий" };
+const riskColors = { low: "text-success", medium: "text-warning", high: "text-destructive" };
+
+export default function BotDetail() {
+  const { botId } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { data: bot, isLoading } = useQuery({
+    queryKey: ["bot", botId],
+    queryFn: () => base44.entities.Bot.get(botId),
+  });
+
+  const updateBot = useMutation({
+    mutationFn: (data) => base44.entities.Bot.update(botId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bot", botId] });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+    },
+  });
+
+  const deleteBot = useMutation({
+    mutationFn: () => base44.entities.Bot.delete(botId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+      navigate("/bots");
+    },
+  });
+
+  const toggleStatus = (newStatus) => {
+    const prevStatus = bot.status;
+    updateBot.mutate({ status: newStatus }, {
+      onSuccess: () => {
+        const statusLabels = { active: "Активен", paused: "На паузе", stopped: "Остановлен", error: "Ошибка" };
+        base44.entities.Notification.create({
+          bot_id: botId, bot_name: bot.name, type: "status_change",
+          title: `${bot.name}: статус изменён`,
+          message: `Статус бота изменён с «${statusLabels[prevStatus] || prevStatus}» на «${statusLabels[newStatus] || newStatus}»`,
+          severity: newStatus === "error" ? "error" : newStatus === "stopped" ? "warning" : "info",
+          is_read: false,
+        });
+      }
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 bg-muted rounded w-48" />
+        <div className="h-40 bg-muted rounded-xl" />
+        <div className="h-64 bg-muted rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!bot) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-muted-foreground">Бот не найден</p>
+        <Button variant="ghost" onClick={() => navigate("/bots")} className="mt-2">← Вернуться</Button>
+      </div>
+    );
+  }
+
+  const isPositive = (bot.profit_loss || 0) >= 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/bots")} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">{bot.name}</h1>
+            <BotStatusBadge status={bot.status} />
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {bot.exchange?.toUpperCase()} · {bot.trading_pair} · {strategyLabels[bot.strategy]}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {bot.status === "active" ? (
+            <Button variant="outline" size="sm" onClick={() => toggleStatus("paused")} className="gap-1.5 border-border text-muted-foreground">
+              <Pause className="w-3.5 h-3.5" /> Пауза
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => toggleStatus("active")} className="gap-1.5">
+              <Play className="w-3.5 h-3.5" /> Запустить
+            </Button>
+          )}
+          {bot.status !== "stopped" && (
+            <Button variant="outline" size="sm" onClick={() => toggleStatus("stopped")} className="gap-1.5 border-border text-muted-foreground">
+              <Square className="w-3.5 h-3.5" /> Стоп
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} className="text-muted-foreground">
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteOpen(true)} className="text-destructive/70 hover:text-destructive">
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: "Баланс", value: `$${(bot.current_balance || bot.initial_capital || 0).toLocaleString()}` },
+          { label: "PnL", value: `${isPositive ? "+" : ""}$${(bot.profit_loss || 0).toFixed(2)}`, color: isPositive ? "text-success" : "text-destructive" },
+          { label: "Win Rate", value: `${(bot.win_rate || 0).toFixed(1)}%` },
+          { label: "Макс. просадка", value: `${(bot.max_drawdown || 0).toFixed(1)}%`, color: "text-destructive" },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-card border border-border rounded-xl p-4">
+            <span className="text-xs text-muted-foreground">{stat.label}</span>
+            <p className={`text-lg font-mono font-semibold mt-1 ${stat.color || "text-foreground"}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: "Начальный капитал", value: `$${(bot.initial_capital || 0).toLocaleString()}` },
+          { label: "Всего сделок", value: bot.total_trades || 0 },
+          { label: "Уровень риска", value: riskLabels[bot.risk_level] || bot.risk_level, color: riskColors[bot.risk_level] },
+          { label: "Доходность (%)", value: `${isPositive ? "+" : ""}${(bot.profit_loss_percent || 0).toFixed(2)}%`, color: isPositive ? "text-success" : "text-destructive" },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-card border border-border rounded-xl p-4">
+            <span className="text-xs text-muted-foreground">{stat.label}</span>
+            <p className={`text-lg font-mono font-semibold mt-1 ${stat.color || "text-foreground"}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <BotPerformanceChart />
+      <RecentTradesTable botId={botId} limit={15} />
+
+      {bot.description && (
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="font-semibold text-foreground mb-2">Описание</h3>
+          <p className="text-sm text-muted-foreground">{bot.description}</p>
+        </div>
+      )}
+
+      <CreateBotDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        initialData={bot}
+        onSubmit={(data) => updateBot.mutateAsync(data)}
+      />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-foreground">
+              <AlertTriangle className="w-5 h-5 text-destructive" /> Удалить бота?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Бот «{bot.name}» будет удалён навсегда. Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border text-muted-foreground">Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteBot.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
 
 
 ================================================
@@ -8244,13 +8424,6 @@ export default function Settings() {
     </div>
   );
 }
-
-
-
-================================================
-FILE: msg_from_previous_session.txt
-================================================
-[Binary file]
 
 
 ================================================
@@ -12500,8 +12673,148 @@ class AnalyticsBotsTable extends StatelessWidget {
 ================================================
 FILE: current_flutter/pages/analytics/analytics_charts_section.dart
 ================================================
-[Binary file]
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../../init/i18n_manager.dart';
+import '../../app_theme.dart';
+import '../../data/models/analytics_models.dart';
+import 'widgets/portfolio_pie_chart.dart';
 
+class AnalyticsChartsSection extends StatelessWidget {
+  final double width;
+  final RustAnalyticsState state;
+
+  const AnalyticsChartsSection({super.key, required this.width, required this.state});
+
+  static const List<Color> colors = [Color(0xFF09DAEC), Color(0xFF10B981), Color(0xFF8B5CF6), Color(0xFFF59E0B)];
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isMobile = width < 900;
+    return Column(
+      children: [
+        _buildCard(
+          context,
+          title: I18n.t(context, 'analytics_bots_profitability'),
+          sub: I18n.t(context, 'analytics_bots_pnl_desc'),
+          child: BarChart(BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: 3000,
+            minY: -500,
+            // 1. Сетка: Включаем только горизонтальные линии (как в CartesianGrid vertical={false})
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 1000,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: AppTheme.bd(context).withOpacity(0.4),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            // 2. Оси: Включаем детальные финтех-подписи осей X и Y из оригинала
+            titlesData: FlTitlesData(
+              show: true,
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              // Ось Y: Форматирование вывода валюты ($1.5k, $0)
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 45, // Немного увеличим отступ для красивого выравнивания
+                  getTitlesWidget: (value, meta) {
+                    if (value == 0) {
+                      return Text('\$0', style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 10));
+                    }
+
+                    final String sign = value < 0 ? '-' : '';
+                    final double absoluteValue = value.abs();
+                    String formatted;
+
+                    if (absoluteValue >= 1000) {
+                      final double thousands = absoluteValue / 1000;
+                      formatted = '${thousands.toStringAsFixed(1)}k';
+                    } else {
+                      formatted = '${absoluteValue.toInt()}';
+                    }
+
+                    return Text(
+                      '$sign\$$formatted',
+                      style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+              // Ось X: Поворот длинных названий роботов под углом -35 градусов для защиты от наложения
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 45,
+                  getTitlesWidget: (value, meta) {
+                    int idx = value.toInt();
+                    if (idx >= 0 && idx < state.botPnL.length) {
+                      String name = state.botPnL[idx].label;
+                      if (name.length > 14) name = '${name.substring(0, 13)}…';
+                      return SideTitleWidget(
+                        meta: meta, // Обязательный именованный параметр в данной версии fl_chart
+                        angle: -0.61, // ~ -35 градусов в радианах
+                        space: 12,
+                        child: Text(
+                          name,
+                          style: TextStyle(color: AppTheme.txtMuted(context), fontSize: 9, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+            // 3. Столбцы: Радиусы скругления углов и динамический цвет PnL
+            barGroups: List.generate(state.botPnL.length, (i) {
+              final double yVal = state.botPnL[i].y;
+              return BarChartGroupData(
+                x: state.botPnL[i].x,
+                barRods: [
+                  BarChartRodData(
+                    toY: yVal,
+                    color: yVal >= 0 ? AppTheme.success : AppTheme.destructive,
+                    width: isMobile ? 14 : 20,
+                    borderRadius: yVal >= 0
+                        ? const BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4))
+                        : const BorderRadius.only(bottomLeft: Radius.circular(4), bottomRight: Radius.circular(4)),
+                  ),
+                ],
+              );
+            }),
+          )),
+        ),
+        const SizedBox(height: 20),
+        isMobile
+            ? Column(children: [_buildDaily(context), const SizedBox(height: 20), _buildBots(context)])
+            : Row(children: [Expanded(child: _buildDaily(context)), const SizedBox(width: 20), Expanded(child: _buildBots(context))]),
+        const SizedBox(height: 20),
+        isMobile
+            ? Column(children: [_buildEx(context), const SizedBox(height: 20), _buildStrat(context)])
+            : Row(children: [Expanded(child: _buildEx(context)), const SizedBox(width: 20), Expanded(child: _buildStrat(context))]),
+      ],
+    );
+  }
+
+  Widget _buildCard(BuildContext context, {required String title, required String sub, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: AppTheme.surface(context), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.bd(context))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.txt(context))), Text(sub, style: TextStyle(fontSize: 11, color: AppTheme.txtMuted(context))), const SizedBox(height: 20), SizedBox(height: 180, child: child)]),
+    );
+  }
+
+  Widget _buildDaily(BuildContext context) => _buildCard(context, title: I18n.t(context, 'analytics_daily_pnl'), sub: '14 дней', child: BarChart(BarChartData(maxY: 150, minY: -100, borderData: FlBorderData(show: false), titlesData: const FlTitlesData(show: false), barGroups: List.generate(state.dailyPnL.length, (i) => BarChartGroupData(x: state.dailyPnL[i].x, barRods: [BarChartRodData(toY: state.dailyPnL[i].y, color: state.dailyPnL[i].y >= 0 ? AppTheme.success : AppTheme.destructive, width: 8)])))));
+  Widget _buildBots(BuildContext context) => _buildCard(context, title: I18n.t(context, 'analytics_balance_dist'), sub: 'Боты', child: PortfolioPieChart(sections: List.generate(state.balanceDistribution.length, (i) => PieChartSectionData(color: colors[i % colors.length], value: state.balanceDistribution[i].value, radius: 20, showTitle: false))));
+  Widget _buildEx(BuildContext context) => _buildCard(context, title: I18n.t(context, 'analytics_by_exchanges'), sub: 'Биржи', child: PortfolioPieChart(sections: List.generate(state.exchangeDistribution.length, (i) => PieChartSectionData(color: i == 0 ? const Color(0xFFF3BA2F) : const Color(0xFFFFA500), value: state.exchangeDistribution[i].value, radius: 20, showTitle: false))));
+  Widget _buildStrat(BuildContext context) => _buildCard(context, title: I18n.t(context, 'analytics_by_strategies'), sub: 'Стратегии', child: BarChart(BarChartData(maxY: 3000, borderData: FlBorderData(show: false), titlesData: const FlTitlesData(show: false), barGroups: List.generate(state.strategyPerformance.length, (i) => BarChartGroupData(x: state.strategyPerformance[i].x, barRods: [BarChartRodData(toY: state.strategyPerformance[i].y, color: const Color(0xFF09DAEC), width: 16)])))));
+}
 
 ================================================
 FILE: current_flutter/pages/analytics/analytics_pie_charts.dart
@@ -15810,14 +16123,6 @@ export default function ApiKeys() {
   );
 }
 
-
-
-================================================
-FILE: original/pages/BotDetail.jsx
-================================================
-[Binary file]
-
-
 ================================================
 FILE: original/pages/Bots.jsx
 ================================================
@@ -15911,8 +16216,6 @@ export default function Bots() {
     </div>
   );
 }
-
-
 
 ================================================
 FILE: original/pages/BotSettings.jsx
